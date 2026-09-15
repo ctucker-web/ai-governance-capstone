@@ -1,0 +1,44 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+secrets/
+config/private/
+credentials.json
+*.key
+*.pem
+
+# Sensitive or private data
+private-data/
+phi/
+pii/
+production-data/
+
+# Dependencies and build outputs
+node_modules/
+dist/
+build/
+coverage/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Python cache (if utilities are added later)
+__pycache__/
+*.py[cod]
+
+# Local databases
+*.sqlite
+*.sqlite3
+
+# Office temporary files
+~$*.docx
+~$*.xlsx
