@@ -7,6 +7,84 @@ import {
   answersSchema,
 } from "../../src/modules/risk/engine";
 describe("deterministic advisory scoring", () => {
+  it.each([
+    [7, "LOW"],
+    [8, "MODERATE"],
+    [14, "MODERATE"],
+    [15, "HIGH"],
+    [21, "HIGH"],
+    [22, "EXECUTIVE_EXCEPTION"],
+  ])("classifies numeric boundary %i as %s", (total, tier) => {
+    let remaining = total;
+    const answers = { ...emptyAnswers };
+    for (const key of Object.keys(answers) as (keyof typeof answers)[]) {
+      answers[key] = Math.min(remaining, 3);
+      remaining -= answers[key];
+    }
+    const policy = {
+      ...defaultConfig,
+      rules: {
+        autonomousCritical: false,
+        sensitiveVendor: false,
+        uncontrolledImpact: false,
+      },
+    };
+    const result = assess(answers, "GENERAL", policy);
+    expect(result.score).toBe(total);
+    expect(result.tier).toBe(tier);
+    expect(result.triggeredRules).toEqual([]);
+  });
+  it("preserves all explanations when escalation rules overlap", () => {
+    const result = assess(
+      {
+        ...emptyAnswers,
+        autonomy: 3,
+        dataSensitivity: 3,
+        vendorAssurance: 2,
+        impact: 3,
+        oversight: 2,
+      },
+      "CLINICAL",
+      defaultConfig,
+    );
+    expect(result.tier).toBe("EXECUTIVE_EXCEPTION");
+    expect(result.triggeredRules).toHaveLength(3);
+    expect(
+      result.factors.reduce((sum, factor) => sum + factor.contribution, 0),
+    ).toBe(result.score);
+  });
+  it("uses a configured disabled rule without changing other escalations", () => {
+    const policy = {
+      ...defaultConfig,
+      rules: { ...defaultConfig.rules, autonomousCritical: false },
+    };
+    expect(
+      assess({ ...emptyAnswers, autonomy: 3 }, "CLINICAL", policy).tier,
+    ).toBe("LOW");
+    expect(
+      assess(
+        { ...emptyAnswers, dataSensitivity: 3, vendorAssurance: 2 },
+        "CLINICAL",
+        policy,
+      ).tier,
+    ).toBe("HIGH");
+  });
+  it("does not mutate answers or the assessed policy", () => {
+    const answers = structuredClone(emptyAnswers),
+      policy = structuredClone(defaultConfig);
+    const first = assess(answers, "GENERAL", policy);
+    expect(assess(answers, "GENERAL", policy)).toEqual(first);
+    expect(answers).toEqual(emptyAnswers);
+    expect(policy).toEqual(defaultConfig);
+  });
+  it.each([NaN, Infinity, 1.5])(
+    "rejects invalid numeric answer %s",
+    (impact) => {
+      expect(() =>
+        assess({ ...emptyAnswers, impact }, "GENERAL", defaultConfig),
+      ).toThrow();
+    },
+  );
   it("classifies minimal information as low without making a decision", () => {
     const r = assess(emptyAnswers, "GENERAL", defaultConfig);
     expect(r.tier).toBe("LOW");
