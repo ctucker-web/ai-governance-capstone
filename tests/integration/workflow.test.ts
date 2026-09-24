@@ -22,6 +22,34 @@ async function submitted() {
   return id;
 }
 describe("PostgreSQL governance lifecycle", () => {
+  it("rejects inaccessible mitigation owners atomically with the decision", async () => {
+    const id = await submitted();
+    const count = await db.auditEvent.count({ where: { useCaseId: id } });
+    await expect(
+      execute(actorFor(1), {
+        action: "decision",
+        id,
+        revision: 1,
+        outcome: "CONDITIONALLY_APPROVED",
+        rationale: "Requires a documented safeguard.",
+        mitigations: [
+          {
+            description: "Must have an accountable owner",
+            ownerId: demoUsers[3].id,
+            dueAt: "2027-01-01",
+          },
+        ],
+      }),
+    ).rejects.toThrow("requester or an assigned reviewer");
+    expect(await db.mitigation.count({ where: { useCaseId: id } })).toBe(0);
+    expect(
+      await db.decision.count({ where: { review: { useCaseId: id } } }),
+    ).toBe(0);
+    expect(await db.auditEvent.count({ where: { useCaseId: id } })).toBe(count);
+    expect((await db.useCase.findUniqueOrThrow({ where: { id } })).status).toBe(
+      "UNDER_REVIEW",
+    );
+  });
   it("completes clinical intake → advisory escalation → human conditional decision → mitigation → audit → reassessment", async () => {
     const data = sampleIntake(`Clinical acceptance ${randomUUID()}`);
     data.domain = "CLINICAL";
@@ -253,6 +281,17 @@ describe("PostgreSQL governance lifecycle", () => {
     };
     await expect(execute(actorFor(0), command)).rejects.toThrow();
     await execute(actorFor(2), command);
+    await expect(execute(actorFor(2), command)).rejects.toThrow(
+      "Policy changed",
+    );
+    const event = await db.auditEvent.findFirstOrThrow({
+      where: { action: "CONFIGURATION_CHANGED", actorId: demoUsers[2].id },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(event.summary).toContain(`LOW: ${demoUsers[1].name}`);
+    expect(event.summary).toContain(
+      `EXECUTIVE_EXCEPTION: ${demoUsers[4].name}`,
+    );
     expect(
       await db.riskConfiguration.findUnique({ where: { id: old.id } }),
     ).toEqual(old);

@@ -136,6 +136,73 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
     page.getByText("Mitigation completed", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Evidence added", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "History", exact: true }).focus();
+  await page.keyboard.press("Home");
+  await expect(
+    page.getByRole("tab", { name: "Overview", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: /Evidence/ })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.keyboard.press("Home");
+  await page
+    .getByLabel("Reason for reassessment")
+    .fill("Vendor model changed; reassess before continued use.");
+  await page
+    .getByRole("button", { name: "Start reassessment", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Edit draft", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Submit for human review", exact: true })
+    .click();
+  await expect(page.getByText(/Assessment v2 ·/)).toBeVisible();
+  await page.getByRole("tab", { name: "History", exact: true }).click();
+  await expect(page.getByText(/Version 1 · High/)).toBeVisible();
+  await expect(page.getByText(/Version 2 · High/)).toBeVisible();
+  await expect(
+    page
+      .getByText("Vendor model changed; reassess before continued use.")
+      .first(),
+  ).toBeVisible();
+});
+test("administrator versions policy and records reviewer routing", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: /Administrator/ }).click();
+  await page
+    .getByRole("button", { name: "Administration", exact: true })
+    .click();
+  const interval = page.getByLabel("Default reassessment interval (days)");
+  const previous = await interval.inputValue();
+  await interval.fill(previous === "180" ? "181" : "180");
+  await page
+    .getByRole("button", { name: "Save a new policy version", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Changes saved");
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Administration", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Default reassessment interval (days)"),
+  ).toHaveValue(previous === "180" ? "181" : "180");
+  // Restore the interval with another auditable version, never erase policy history.
+  await page.getByLabel("Default reassessment interval (days)").fill(previous);
+  await page
+    .getByRole("button", { name: "Save a new policy version", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Changes saved");
+  await page
+    .getByRole("button", { name: "Audit history", exact: true })
+    .click();
+  await expect(
+    page.getByText(/Routing: LOW: Jordan Lee/).first(),
+  ).toBeVisible();
 });
 test("HTTP authorization and cross-origin protections", async ({ request }) => {
   expect((await request.get("/api/workspace")).status()).toBe(401);

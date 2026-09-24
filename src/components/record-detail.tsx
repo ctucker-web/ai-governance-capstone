@@ -87,26 +87,50 @@ export default function RecordDetail({
         </span>
       </div>
       <div className="tabs" role="tablist" aria-label="Record sections">
-        {["overview", "evidence", "mitigations", "history"].map((t) => (
-          <button
-            role="tab"
-            id={`tab-${t}`}
-            aria-selected={tab === t}
-            aria-controls={`panel-${t}`}
-            key={t}
-            className={tab === t ? "active" : ""}
-            onClick={() => setTab(t)}
-          >
-            {human(t)}
-            {t === "mitigations"
-              ? ` (${r.mitigations.length})`
-              : t === "evidence"
-                ? ` (${r.evidence.length})`
-                : ""}
-          </button>
-        ))}
+        {["overview", "evidence", "mitigations", "history"].map(
+          (t, index, tabs) => (
+            <button
+              role="tab"
+              id={`tab-${t}`}
+              aria-selected={tab === t}
+              aria-controls={`panel-${t}`}
+              tabIndex={tab === t ? 0 : -1}
+              key={t}
+              className={tab === t ? "active" : ""}
+              onClick={() => setTab(t)}
+              onKeyDown={(event) => {
+                const next =
+                  event.key === "ArrowRight"
+                    ? (index + 1) % tabs.length
+                    : event.key === "ArrowLeft"
+                      ? (index + tabs.length - 1) % tabs.length
+                      : event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? tabs.length - 1
+                          : null;
+                if (next === null) return;
+                event.preventDefault();
+                setTab(tabs[next]);
+                document.getElementById(`tab-${tabs[next]}`)?.focus();
+              }}
+            >
+              {human(t)}
+              {t === "mitigations"
+                ? ` (${r.mitigations.length})`
+                : t === "evidence"
+                  ? ` (${r.evidence.length})`
+                  : ""}
+            </button>
+          ),
+        )}
       </div>
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+      <div
+        role="tabpanel"
+        id={`panel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+        tabIndex={0}
+      >
         {tab === "overview" && (
           <>
             <div className="detail-grid">

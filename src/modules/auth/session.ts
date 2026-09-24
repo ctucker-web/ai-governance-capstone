@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { signSession, verifySession } from "./token";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { AppError, type Actor } from "./policy";
@@ -20,13 +20,10 @@ function secret() {
     );
   return s;
 }
-function sign(value: string) {
-  return createHmac("sha256", secret()).update(value).digest("hex");
-}
 export async function issueSession(id: string) {
   const payload = `${id}.${Date.now() + 8 * 60 * 60 * 1000}`;
   const jar = await cookies();
-  jar.set(cookieName, `${payload}.${sign(payload)}`, {
+  jar.set(cookieName, `${payload}.${signSession(payload, secret())}`, {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.COOKIE_SECURE === "true",
@@ -42,23 +39,7 @@ export const demoProvider: IdentityProvider = {
     if (!demoEnabled()) return null;
     const token = (await cookies()).get(cookieName)?.value;
     if (!token) return null;
-    const [id, expiry, mac, ...rest] = token.split(".");
-    if (
-      rest.length ||
-      !id ||
-      !expiry ||
-      !mac ||
-      !/^\d+$/.test(expiry) ||
-      Number(expiry) < Date.now()
-    )
-      return null;
-    const expected = sign(`${id}.${expiry}`);
-    if (
-      mac.length !== expected.length ||
-      !timingSafeEqual(Buffer.from(mac), Buffer.from(expected))
-    )
-      return null;
-    return id;
+    return verifySession(token, secret());
   },
 };
 // An OIDC adapter must verify issuer, audience, signature, nonce and map its subject

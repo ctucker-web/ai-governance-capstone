@@ -96,10 +96,12 @@ export async function execute(actor: Actor, input: unknown) {
             const old = await currentConfig(tx, actor.organizationId);
             if (old.version !== c.version)
               throw new AppError(409, "Policy changed. Refresh before saving.");
+            const routingSummary: string[] = [];
             for (const tier of tiers) {
               const u = await person(tx, actor, c.routing[tier]);
               if (!u.roles.some((r) => r.role === "REVIEWER"))
                 throw new AppError(400, "Routing requires a reviewer account.");
+              routingSummary.push(`${tier}: ${u.name} (${u.id})`);
             }
             const config = await tx.riskConfiguration.create({
               data: {
@@ -128,7 +130,7 @@ export async function execute(actor: Actor, input: unknown) {
               actor,
               "CONFIGURATION_CHANGED",
               null,
-              `Policy version ${config.version}; scoring, routing, and reassessment settings saved.`,
+              `Policy version ${config.version}; scoring and reassessment settings saved. Routing: ${routingSummary.join("; ")}.`,
             );
             return { id: config.id };
           }
@@ -177,6 +179,19 @@ export async function execute(actor: Actor, input: unknown) {
             canReview(actor, record.requesterId, r.reviewerId),
           );
           const admin = actor.roles.includes("ADMINISTRATOR");
+          const mitigationOwner = async (id: string) => {
+            const user = await person(tx, actor, id);
+            const eligible =
+              (id === record.requesterId &&
+                user.roles.some((r) => r.role === "REQUESTER")) ||
+              (record.reviews.some((r) => r.reviewerId === id) &&
+                user.roles.some((r) => r.role === "REVIEWER"));
+            if (!eligible)
+              throw new AppError(
+                400,
+                "Mitigation owner must be the requester or an assigned reviewer.",
+              );
+          };
           if ("revision" in c && record.revision !== c.revision)
             throw new AppError(
               409,
@@ -321,7 +336,7 @@ export async function execute(actor: Actor, input: unknown) {
               );
             } else {
               for (const m of c.mitigations) {
-                await person(tx, actor, m.ownerId);
+                await mitigationOwner(m.ownerId);
                 await tx.mitigation.create({
                   data: {
                     ...m,
@@ -415,7 +430,7 @@ export async function execute(actor: Actor, input: unknown) {
                 403,
                 "Only an assigned reviewer can add mitigations.",
               );
-            await person(tx, actor, c.ownerId);
+            await mitigationOwner(c.ownerId);
             await tx.mitigation.create({
               data: {
                 useCaseId: record.id,
