@@ -1,0 +1,47 @@
+name: Build Unit 5 Assignment Report
+
+on:
+  push:
+    branches: [feature/unit5-core-logic]
+    paths:
+      - .github/workflows/unit5-report.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install report dependencies
+        run: pip install python-docx pillow pygments
+
+      - name: Generate screenshots and Word report
+        run: python scripts/build_unit5_report.py
+
+      - name: Upload assignment artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MSIT-5910-Unit5-Assignment
+          path: build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx
+
+      - name: Attach report to Unit 5 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v0.5.0-unit5 \
+            build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx \
+            --clobber
