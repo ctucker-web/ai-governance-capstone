@@ -45,6 +45,17 @@ jobs:
             build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx
           test -s build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.pdf
 
+      - name: Publish PDF evidence in feature branch
+        run: |
+          mkdir -p docs/evidence
+          cp build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.pdf \
+            docs/evidence/MSIT_5910_Unit5_Report_QA.pdf
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/evidence/MSIT_5910_Unit5_Report_QA.pdf
+          git diff --cached --quiet || git commit -m "docs: add rendered Unit 5 report QA evidence"
+          git push origin HEAD:feature/unit5-core-logic
+
       - name: Upload assignment artifacts
         uses: actions/upload-artifact@v4
         with:
