@@ -1,0 +1,57 @@
+name: Unit 5 Milestone Releases
+
+on:
+  push:
+    branches: [feature/unit5-core-logic]
+    paths:
+      - .github/workflows/unit5-release.yml
+
+permissions:
+  contents: write
+
+jobs:
+  create-milestones:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create milestone tags
+        run: |
+          create_tag () {
+            TAG="$1"
+            SHA="$2"
+            MESSAGE="$3"
+            if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+              echo "$TAG already exists"
+            else
+              git tag -a "$TAG" "$SHA" -m "$MESSAGE"
+              git push origin "$TAG"
+            fi
+          }
+
+          create_tag "v0.4.0-initial-mvp" "546d7ec9f6426920e1a6ca719012f93a9d69b15a" "Unit 4 initial working MVP"
+          create_tag "v0.5.0-unit5" "$GITHUB_SHA" "Unit 5 core logic and unit testing milestone"
+
+      - name: Create GitHub releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "v0.4.0-initial-mvp" >/dev/null 2>&1; then
+            gh release create "v0.4.0-initial-mvp" \
+              --title "Unit 4 - Initial Working MVP" \
+              --notes "Initial browser-based AI Governance Risk and Approval Platform MVP. Demonstrates intake, advisory risk classification, AI inventory, human review, rationale, dashboard metrics, and audit events using synthetic data."
+          fi
+
+          if ! gh release view "v0.5.0-unit5" >/dev/null 2>&1; then
+            gh release create "v0.5.0-unit5" \
+              --title "Unit 5 - Core Logic and Unit Testing" \
+              --notes "Implements modular explainable risk assessment, mandatory escalation rules, human decision validation, audit-event logic, 13 automated unit tests, repeatable output validation, and CI execution."
+          fi
