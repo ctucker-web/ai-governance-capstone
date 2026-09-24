@@ -2,19 +2,31 @@ name: CI
 
 on:
   push:
-    branches: [main, development]
+    branches: [main, development, feature/unit5-core-logic]
   pull_request:
     branches: [main, development]
 
 jobs:
-  repository-check:
+  test-and-validate:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Verify required documentation
         run: |
           test -f README.md
           test -f docs/requirements/SRS.md
           test -f docs/design/Software_Design_Document.md
           echo "Required capstone documentation is present."
+
+      - name: Run Unit 5 module tests
+        run: npm test
+
+      - name: Demonstrate core logic output
+        run: npm run demo:logic
