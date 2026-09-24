@@ -42,3 +42,12 @@ __pycache__/
 # Office temporary files
 ~$*.docx
 ~$*.xlsx
+
+# Application artifacts
+.next/
+.local/
+*.tsbuildinfo
+next-env.d.ts
+playwright-report/
+test-results/
+.pnpm-store/

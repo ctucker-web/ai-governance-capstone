@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  REQUESTER
+  REVIEWER
+  ADMINISTRATOR
+  AUDITOR
+}
+enum Status {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFORMATION
+  CONDITIONALLY_APPROVED
+  APPROVED
+  REJECTED
+  REASSESSMENT_DUE
+  ARCHIVED
+}
+enum Tier {
+  LOW
+  MODERATE
+  HIGH
+  EXECUTIVE_EXCEPTION
+}
+enum MitigationStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETE
+  WAIVED
+}
+model Organization {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  users User[]
+  systems AISystem[]
+  configurations RiskConfiguration[]
+  routing RoutingRule[]
+  createdAt DateTime @default(now())
+}
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id])
+  name String
+  email String @unique
+  oidcSubject String? @unique
+  roles UserRole[]
+  useCases UseCase[]
+  reviews Review[]
+  evidence Evidence[]
+  mitigations Mitigation[]
+  events AuditEvent[]
+  routing RoutingRule[]
+  createdAt DateTime @default(now())
+}
+model UserRole {
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  role Role
+  @@id([userId, role])
+}
+model AISystem {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id])
+  name String
+  vendor String
+  useCases UseCase[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model UseCase {
+  id String @id @default(uuid()) @db.Uuid
+  systemId String @db.Uuid
+  system AISystem @relation(fields: [systemId], references: [id])
+  requesterId String @db.Uuid
+  requester User @relation(fields: [requesterId], references: [id])
+  title String
+  department String
+  purpose String
+  description String
+  affectedUsers String
+  affectedPeople String
+  dataCategories String[]
+  decisionSupport String
+  autonomy String
+  oversight String
+  vendorInformation String
+  domain String
+  answers Json
+  status Status @default(DRAFT)
+  revision Int @default(0)
+  reviewedAt DateTime?
+  nextReviewAt DateTime?
+  reviewIntervalDays Int?
+  assessments RiskAssessment[]
+  reviews Review[]
+  evidence Evidence[]
+  mitigations Mitigation[]
+  events AuditEvent[]
+  reassessments Reassessment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([requesterId, status])
+}
+model RiskConfiguration {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id])
+  version Int
+  settings Json
+  assessments RiskAssessment[]
+  createdAt DateTime @default(now())
+  @@unique([organizationId, version])
+}
+model RoutingRule {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id])
+  tier Tier
+  reviewerId String @db.Uuid
+  reviewer User @relation(fields: [reviewerId], references: [id])
+  @@unique([organizationId, tier])
+}
+model RiskAssessment {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String @db.Uuid
+  useCase UseCase @relation(fields: [useCaseId], references: [id])
+  configurationId String @db.Uuid
+  configuration RiskConfiguration @relation(fields: [configurationId], references: [id])
+  version Int
+  tier Tier
+  score Float
+  triggeredRules String[]
+  inputSnapshot Json
+  policySnapshot Json
+  factors RiskAssessmentFactor[]
+  reviews Review[]
+  createdAt DateTime @default(now())
+  @@unique([useCaseId, version])
+}
+model RiskAssessmentFactor {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  assessment RiskAssessment @relation(fields: [assessmentId], references: [id])
+  key String
+  label String
+  score Int
+  weight Float
+  contribution Float
+}
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String @db.Uuid
+  useCase UseCase @relation(fields: [useCaseId], references: [id])
+  assessmentId String @db.Uuid
+  assessment RiskAssessment @relation(fields: [assessmentId], references: [id])
+  reviewerId String @db.Uuid
+  reviewer User @relation(fields: [reviewerId], references: [id])
+  decision Decision?
+  closedAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([assessmentId, reviewerId])
+}
+model Decision {
+  id String @id @default(uuid()) @db.Uuid
+  reviewId String @unique @db.Uuid
+  review Review @relation(fields: [reviewId], references: [id])
+  outcome Status
+  rationale String
+  createdAt DateTime @default(now())
+}
+model Evidence {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String @db.Uuid
+  useCase UseCase @relation(fields: [useCaseId], references: [id])
+  reviewerId String @db.Uuid
+  reviewer User @relation(fields: [reviewerId], references: [id])
+  type String
+  description String
+  reference String
+  notes String
+  reviewedAt DateTime?
+  createdAt DateTime @default(now())
+}
+model Mitigation {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String @db.Uuid
+  useCase UseCase @relation(fields: [useCaseId], references: [id])
+  ownerId String @db.Uuid
+  owner User @relation(fields: [ownerId], references: [id])
+  description String
+  dueAt DateTime
+  status MitigationStatus @default(OPEN)
+  completionNotes String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model AuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String? @db.Uuid
+  useCase UseCase? @relation(fields: [useCaseId], references: [id])
+  actorId String @db.Uuid
+  actor User @relation(fields: [actorId], references: [id])
+  action String
+  previousStatus Status?
+  newStatus Status?
+  summary String
+  createdAt DateTime @default(now())
+  @@index([useCaseId, createdAt])
+}
+model Reassessment {
+  id String @id @default(uuid()) @db.Uuid
+  useCaseId String @db.Uuid
+  useCase UseCase @relation(fields: [useCaseId], references: [id])
+  reason String
+  previousVersion Int
+  createdAt DateTime @default(now())
+}

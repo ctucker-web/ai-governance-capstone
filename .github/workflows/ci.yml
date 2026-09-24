@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, development]
 
+permissions:
+  contents: read
+
 jobs:
   repository-check:
     runs-on: ubuntu-latest
@@ -18,3 +21,62 @@ jobs:
           test -f docs/requirements/SRS.md
           test -f docs/design/Software_Design_Document.md
           echo "Required capstone documentation is present."
+  application:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-bookworm
+        env:
+          POSTGRES_USER: governance
+          POSTGRES_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+          POSTGRES_DB: governance_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U governance -d governance_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Unique disposable runner credentials; never used outside this CI service.
+      DATABASE_URL: postgresql://governance:${{ github.run_id }}-${{ github.run_attempt }}@localhost:5432/governance_test
+      TEST_DATABASE_URL: postgresql://governance:${{ github.run_id }}-${{ github.run_attempt }}@localhost:5432/governance_test
+      AUTH_MODE: demo
+      DEMO_AUTH_ENABLED: "true"
+      APP_URL: http://localhost:3100
+      COOKIE_SECURE: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Generate ephemeral session secret
+        run: echo "SESSION_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run db:generate
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: node scripts/prepare-test-db.mjs
+      - run: pnpm run test:integration
+      - run: pnpm run build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run test:e2e
+      - name: Dependency review
+        run: pnpm audit --prod --audit-level high
+      - name: Build and smoke-test container
+        run: |
+          docker build -t governance-mvp .
+          docker run -d --name governance-mvp --network host \
+            -e DATABASE_URL -e SESSION_SECRET -e AUTH_MODE=disabled \
+            -e HOSTNAME=127.0.0.1 -e PORT=3200 -e APP_URL=http://localhost:3200 governance-mvp
+          trap 'docker logs governance-mvp; docker rm -f governance-mvp' EXIT
+          curl --retry 15 --retry-connrefused --retry-delay 2 --fail http://localhost:3200/api/health
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3200/api/workspace)" = 401
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results/
