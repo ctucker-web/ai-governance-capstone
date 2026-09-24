@@ -32,16 +32,32 @@ jobs:
       - name: Generate screenshots and Word report
         run: python scripts/build_unit5_report.py
 
-      - name: Upload assignment artifact
+      - name: Install LibreOffice for deterministic PDF QA
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libreoffice-writer >/dev/null
+
+      - name: Render Word report to PDF
+        run: |
+          mkdir -p /tmp/lo-profile
+          libreoffice -env:UserInstallation=file:///tmp/lo-profile --headless \
+            --convert-to pdf --outdir build/unit5-report \
+            build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx
+          test -s build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.pdf
+
+      - name: Upload assignment artifacts
         uses: actions/upload-artifact@v4
         with:
           name: MSIT-5910-Unit5-Assignment
-          path: build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx
+          path: |
+            build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx
+            build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.pdf
 
-      - name: Attach report to Unit 5 release
+      - name: Attach report files to Unit 5 release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload v0.5.0-unit5 \
             build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.docx \
+            build/unit5-report/MSIT_5910_Unit5_Core_Logic_Testing_Version_Control.pdf \
             --clobber
