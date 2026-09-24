@@ -59,6 +59,25 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
   await page.getByRole("button", { name: /Executive review/ }).click();
   await page.getByRole("button", { name: /Review queue/ }).click();
   await page.getByRole("button", { name, exact: true }).click();
+  await page.getByRole("tab", { name: /Evidence/ }).click();
+  await page
+    .getByLabel("Evidence type", { exact: true })
+    .fill("Vendor assurance");
+  await page
+    .getByLabel("Reference URL")
+    .fill("https://example.com/synthetic-assurance");
+  await page
+    .getByLabel("Evidence description")
+    .fill("Synthetic vendor review supports restricted use.");
+  await page
+    .getByLabel("Evidence notes")
+    .fill("No confidential documents were uploaded.");
+  await page.getByLabel("Date reviewed").fill("2026-09-24");
+  await page.getByRole("button", { name: "Add evidence", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: /Open reference/ }),
+  ).toHaveAttribute("href", "https://example.com/synthetic-assurance");
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
   await page
     .getByLabel("Decision rationale")
     .fill(
@@ -88,6 +107,35 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
       name: "Human verification required before AI-generated content enters the official record.",
     }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "AI inventory", exact: true }).click();
+  await page.getByLabel("Search records").fill(name);
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("button", { name, exact: true }) });
+  await expect(row).toContainText("Conditionally approved");
+  await expect(row).toContainText("Taylor Chen");
+  await expect(row.getByRole("cell").nth(5)).not.toHaveText("—");
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Switch demo identity" }).click();
+  await page.getByRole("button", { name: /Requester/ }).click();
+  await page.getByRole("button", { name: "AI inventory", exact: true }).click();
+  await page.getByLabel("Search records").fill(name);
+  await page.getByRole("button", { name, exact: true }).click();
+  await page.getByRole("tab", { name: /Mitigations/ }).click();
+  await page.getByLabel("Mitigation status").selectOption("COMPLETE");
+  await page
+    .getByLabel("Completion notes / waiver rationale")
+    .fill("Every draft is reviewed under the documented procedure.");
+  await page
+    .getByRole("button", { name: "Update mitigation", exact: true })
+    .click();
+  await expect(page.locator(".mitigation-card .badge")).toHaveText("Complete");
+  await page.getByRole("tab", { name: "History", exact: true }).click();
+  await expect(
+    page.getByText("Mitigation completed", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Evidence added", { exact: true })).toBeVisible();
 });
 test("HTTP authorization and cross-origin protections", async ({ request }) => {
   expect((await request.get("/api/workspace")).status()).toBe(401);
