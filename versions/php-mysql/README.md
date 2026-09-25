@@ -49,7 +49,9 @@ The PHP commands above run from this version directory. Integration tests add sy
 
 For browser checks serve `public/` at `http://localhost:3200/ai/` with a test-only configuration using the same URL, then from the repository root run `pnpm exec playwright test --config versions/php-mysql/playwright.config.ts`. Tests cover the clinical scenario from intake through conditional approval, evidence, mitigation completion and reassessment; policy versioning; HTTP protection; and mobile intake. PHPStan checks PHP 8.3 compatibility at level 5; TypeScript checks the browser source.
 
-Local verification: PHP 8.5.11 / MariaDB 11.4.8, 37 PHP checks and 4 browser tests passed. PHPStan level 5 and TypeScript passed. Actual DreamHost deployment is still pending; MySQL 8 / PHP 8.3 validation must run in CI before claiming those environments verified.
+Local verification: PHP 8.5.11 / MariaDB 11.4.8, 37 PHP checks and 4 browser tests passed. PHPStan level 5 and TypeScript passed. [GitHub Actions run 36177575696](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/36177575696) also passed PHP 8.3/MySQL 8 integration and browser tests, lint, static analysis, the existing 49 TypeScript unit tests, production bundle generation, and release packaging.
+
+Deployment checkpoint (2026-09-25): private files are uploaded to `/home/chrrai4/ai-governance-php/`; public files are uploaded to `/home/chrrai4/changedevelop.org/ai/`. HTTPS renders the PHP/MySQL Version page and correctly reports that configuration is missing. The separate `changedevelop_ai` database form is prepared in DreamHost; credential entry and creation require the account owner's action. Database configuration, migration/seed, and the hosted acceptance scenario remain outstanding. The platform is not yet usable on DreamHost.
 
 ## Known limitations and roadmap
 
