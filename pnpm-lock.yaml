@@ -48,6 +48,9 @@ importers:
       embedded-postgres:
         specifier: 18.4.0-beta.17
         version: 18.4.0-beta.17
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^9.0.0
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
