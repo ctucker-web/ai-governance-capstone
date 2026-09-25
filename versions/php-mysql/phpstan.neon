@@ -6,6 +6,3 @@ parameters:
         - bin
         - public
     tmpDir: .phpstan-cache
-    excludePaths:
-        analyse:
-            - public/deployment-path.php
