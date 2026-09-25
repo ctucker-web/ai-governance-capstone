@@ -1,0 +1,77 @@
+name: PHP MySQL Version
+on:
+  push:
+    branches: [feature/php-mysql-version]
+  pull_request:
+    branches: [main, development]
+permissions:
+  contents: read
+jobs:
+  php-mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+          MYSQL_DATABASE: governance_php_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      GOVERNANCE_CONFIG: ${{ github.workspace }}/.local/php-ci.php
+      MYSQL_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring
+          coverage: none
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build browser assets and verify catalog
+        run: |
+          node versions/php-mysql/build.mjs
+          git diff --exit-code -- versions/php-mysql/app/catalog.json
+      - name: PHP lint and static analysis
+        run: |
+          find versions/php-mysql -name '*.php' -print0 | xargs -0 -n1 php -l
+          curl -fsSL https://github.com/phpstan/phpstan/releases/download/2.2.16/phpstan.phar -o .local/phpstan.phar
+          echo '1a2fb5460c142502d3cd06272529c18b19fda004ada974bd2581cb9fd6c0a53b  .local/phpstan.phar' | sha256sum -c -
+          php .local/phpstan.phar analyse -c versions/php-mysql/phpstan.neon --memory-limit=512M --no-progress
+      - name: Test PHP workflows on MySQL 8
+        run: |
+          php versions/php-mysql/tests/ci-config.php
+          php versions/php-mysql/tests/run.php --integration
+      - name: Browser acceptance on the subdirectory deployment
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          php -S localhost:3200 versions/php-mysql/bin/dev-router.php > .local/php-server.log 2>&1 &
+          PHP_SERVER_PID=$!
+          trap 'kill "$PHP_SERVER_PID"' EXIT
+          curl --retry 10 --retry-connrefused --retry-delay 1 --fail 'http://localhost:3200/ai/api.php?resource=health'
+          pnpm exec playwright test --config versions/php-mysql/playwright.config.ts
+      - name: Package deployable files
+        run: node versions/php-mysql/package.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PHP-MySQL-Version
+          path: .local/php-mysql-release/
+          include-hidden-files: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: php-mysql-test-results
+          path: test-results/php-mysql/
