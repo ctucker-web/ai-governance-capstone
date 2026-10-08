@@ -11,5 +11,7 @@ export default defineConfig([
     ".local/**",
     "test-results/**",
     "playwright-report/**",
+    "versions/php-mysql/public/assets/**",
+    "versions/php-mysql/vendor/**",
   ]),
 ]);

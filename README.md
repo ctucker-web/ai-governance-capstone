@@ -2,6 +2,8 @@
 
 MSIT 5910 Capstone Project
 
+Platform implementations are tracked in [VERSIONS.md](VERSIONS.md). The separate [PHP/MySQL Version](versions/php-mysql/README.md) targets existing DreamHost shared hosting; the root application remains the Next.js/PostgreSQL Version.
+
 ## Overview
 
 This repository contains the design, documentation, source code, test assets, and release materials for a lightweight AI Governance Risk and Approval Platform intended for nonprofit organizations. The platform is designed to help organizations identify, assess, approve, document, and monitor artificial intelligence use in a consistent and auditable way.

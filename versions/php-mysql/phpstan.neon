@@ -1,0 +1,8 @@
+parameters:
+    level: 5
+    phpVersion: 80300
+    paths:
+        - app
+        - bin
+        - public
+    tmpDir: .phpstan-cache

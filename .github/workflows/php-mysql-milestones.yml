@@ -1,0 +1,45 @@
+name: PHP MySQL Milestone Releases
+
+on:
+  push:
+    branches: [feature/php-mysql-version]
+    paths:
+      - .github/workflows/php-mysql-milestones.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  milestone-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create PHP/MySQL milestone tags and releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          create_release () {
+            TAG="$1"
+            COMMIT="$2"
+            TITLE="$3"
+            NOTES="$4"
+
+            if ! git rev-parse "refs/tags/$TAG" >/dev/null 2>&1; then
+              git tag "$TAG" "$COMMIT"
+              git push origin "$TAG"
+            fi
+
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
+              gh release create "$TAG" --target "$COMMIT" --title "$TITLE" --notes "$NOTES"
+            fi
+          }
+
+          create_release             "php-mysql-v0.1.0-initial"             "08be31c7c675872b5eb2abe9d58adbc8dce9461b"             "PHP/MySQL Initial Implementation"             "Initial PHP/MySQL implementation of the AI Governance Risk and Approval Platform. Adds the separate shared-host application, MySQL schema, server-side workflow logic, advisory risk engine, and initial workflow tests while preserving the earlier Next.js/PostgreSQL version."
+
+          create_release             "php-mysql-v0.2.0-tested"             "a5c62f9bfd9d3d91ec2914579d1195be974d363a"             "PHP/MySQL Tested MVP"             "Validated PHP/MySQL capstone milestone. GitHub Actions passed on PHP 8.3/MySQL 8 with 37 PHP checks and 4 browser acceptance tests, plus PHPStan level 5, TypeScript, ESLint, production asset generation, packaging, and the existing shared unit-test suite. DreamHost files were uploaded; hosted database configuration and final hosted acceptance remain pending."
