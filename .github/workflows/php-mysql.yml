@@ -63,6 +63,8 @@ jobs:
           trap 'kill "$PHP_SERVER_PID"' EXIT
           curl --retry 10 --retry-connrefused --retry-delay 1 --fail 'http://localhost:3200/ai/api.php?resource=health'
           pnpm exec playwright test --config versions/php-mysql/playwright.config.ts
+      - name: Benchmark advisory risk engine (synthetic PHP CLI)
+        run: php versions/php-mysql/tests/benchmark.php
       - name: Package deployable files
         run: node versions/php-mysql/package.mjs
       - uses: actions/upload-artifact@v4
