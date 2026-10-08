@@ -2,8 +2,8 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/app/bootstrap.php';
 
-use function Governance\\assess;
-use function Governance\\catalog;
+use function Governance\assess;
+use function Governance\catalog;
 
 $dimensions = array_column(catalog()['dimensions'], 'key');
 $zero = array_fill_keys($dimensions, 0);
