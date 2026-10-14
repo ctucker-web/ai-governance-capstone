@@ -26,6 +26,17 @@ rejects(fn()=>answers([]),400,'Incomplete answers rejected');
 rejects(fn()=>answers(array_replace($empty,['impact'=>'3'])),400,'String risk scores rejected');
 $invalid=$config; $invalid['high']=1; rejects(fn()=>policy($invalid),400,'Unordered thresholds rejected');
 rejects(fn()=>Governance\dateValue('2026-02-30'),400,'Impossible date rejected');
+// Unit 7 regression expansion: malformed inputs and policy boundaries.
+rejects(fn()=>answers(array_replace($empty,['impact'=>-1])),400,'Negative risk score rejected');
+rejects(fn()=>answers(array_replace($empty,['impact'=>4])),400,'Risk score above 3 rejected');
+rejects(fn()=>answers(array_replace($empty,['impact'=>1.5])),400,'Fractional risk score rejected');
+rejects(fn()=>answers(array_replace($empty,['extraFactor'=>1])),400,'Unexpected risk factor rejected');
+$missingWeight=$config; unset($missingWeight['weights']['impact']);
+rejects(fn()=>policy($missingWeight),400,'Missing risk weight rejected');
+$shortReview=$config; $shortReview['reassessmentDays']=6;
+rejects(fn()=>policy($shortReview),400,'Too-short reassessment interval rejected');
+rejects(fn()=>Governance\identifier('invalid-id'),400,'Malformed record identifier rejected');
+
 if (in_array('--integration',$argv,true)) {
     $configuration=Governance\configuration();
     if (!preg_match('/dbname=[^;]*_test(?:;|$)/',$configuration['dsn'])) throw new RuntimeException('Integration tests require a database name ending in _test.');
