@@ -1,0 +1,18 @@
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
+import { mkdirSync, writeFileSync, copyFileSync } from 'node:fs';
+const require = createRequire(import.meta.url);
+const esbuild = require.resolve('esbuild');
+const { build } = await import(pathToFileURL(esbuild).href);
+const root = path.resolve(fileURLToPath(new URL('../..',import.meta.url)));
+const version = path.join(root,'versions/php-mysql');
+mkdirSync(path.join(version,'public/assets'),{recursive:true});
+await build({entryPoints:[path.join(version,'frontend/main.tsx')],bundle:true,minify:true,jsx:'automatic',platform:'browser',target:'es2022',outfile:path.join(version,'public/assets/app.js'),define:{'process.env.NODE_ENV':'"production"'},alias:{'@':path.join(root,'src'),'next/navigation':path.join(version,'frontend/navigation.ts'),'next/link':path.join(version,'frontend/link.tsx')}});
+copyFileSync(path.join(root,'src/app/globals.css'),path.join(version,'public/assets/app.css'));
+mkdirSync(path.join(root,'.local'),{recursive:true});
+const catalogFile=path.join(root,'.local/php-catalog.mjs');
+await build({stdin:{contents:"export {dimensions,defaultConfig} from './src/modules/risk/engine'; export {demoUsers,orgId} from './src/modules/auth/demo-users';",resolveDir:root},bundle:true,platform:'node',format:'esm',outfile:catalogFile});
+const catalog = await import(pathToFileURL(catalogFile).href+'?time='+Date.now());
+writeFileSync(path.join(version,'app/catalog.json'),JSON.stringify(catalog,null,2)+'\n');
+console.log('Built PHP/MySQL Version browser assets and matching risk catalog.');
