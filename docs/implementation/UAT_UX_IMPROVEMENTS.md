@@ -109,6 +109,10 @@ The following results were executed locally for this change on October 21, 2026.
 
 Initial browser runs exposed selector/fixture timing problems, which were corrected while retaining the existing workflow assertions. One type-check attempt overlapped a Next.js build and encountered generated files being replaced; the sequential rerun passed. No failed attempt is counted as a successful result.
 
+The first remote [PHP/MySQL workflow](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39685828644) passed all checks, including PHP 8.3/MySQL 8 and all 23 browser cases. The corresponding [original-version workflow](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39685828786) passed its application tests but failed the existing production dependency audit. Its container smoke test was consequently skipped. The audit threshold and all tests remain enabled.
+
+That audit reported existing dependencies affected by [Next.js image optimization SSRF](https://github.com/advisories/GHSA-cjq9-62q9-8jv4), [sharp's librsvg dependency](https://github.com/advisories/GHSA-wq5f-xc86-pv6w), and [source-map-js event-loop denial of service](https://github.com/advisories/GHSA-68fv-2mgg-jv7q). A separate dependency-maintenance commit updates Next.js and its matching ESLint configuration to 16.3.8, sharp to 0.35.5, and source-map-js to 1.2.2. The repeated local `pnpm audit --prod --audit-level high` reported **No known vulnerabilities found**. This adds no framework or direct dependency; PHP hosting still serves compiled static assets. Final rerun outcomes are recorded on the pull request checks.
+
 ## Human follow-up and limitations
 
 Use the [revised UAT protocol](../testing/UAT_UX_FOLLOWUP_PROTOCOL.md) after deploying the reviewed build to an approved test/demo environment. It preserves the clinical-documentation workflow, uses **T1 — Submit Assessment**, records first click, start discovery, assistance, understanding, confirmation, duration, and hesitation, and separates independent, assisted, incomplete, and blocked outcomes.
