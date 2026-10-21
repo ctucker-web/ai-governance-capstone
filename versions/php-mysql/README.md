@@ -8,6 +8,8 @@ PHP 8.3+ with PDO MySQL and mbstring, MySQL-compatible InnoDB database, HTTPS an
 
 The shared interface and risk catalog come from the original implementation. PHP independently validates requests, computes advisory risk, enforces organization/role/ownership rules, and records human decisions. Database tables store users, policies, use-case aggregates, historical snapshots and an HMAC-linked audit log. Transactions serialize organization writes and reject stale workflow revisions. Policy changes do not rewrite earlier assessments.
 
+The [UAT-driven UX improvements](../../docs/implementation/UAT_UX_IMPROVEMENTS.md) add a prominent Requester starting point, process guidance, intake progress and validation help, and persisted submission confirmation. They reuse the shared React components rather than replacing this PHP/MySQL architecture. See the [follow-up human UAT protocol](../../docs/testing/UAT_UX_FOLLOWUP_PROTOCOL.md) for the next volunteer sessions; automated checks do not establish improved human outcomes.
+
 ## Build and configure
 
 From the repository root, install the pinned Node dependencies with `pnpm install --frozen-lockfile`, then run `node versions/php-mysql/build.mjs`. Node is a build tool only.
@@ -49,9 +51,9 @@ The PHP commands above run from this version directory. Integration tests add sy
 
 For browser checks serve `public/` at `http://localhost:3200/ai/` with a test-only configuration using the same URL, then from the repository root run `pnpm exec playwright test --config versions/php-mysql/playwright.config.ts`. Tests cover the clinical scenario from intake through conditional approval, evidence, mitigation completion and reassessment; policy versioning; HTTP protection; and mobile intake. PHPStan checks PHP 8.3 compatibility at level 5; TypeScript checks the browser source.
 
-Local verification: PHP 8.5.11 / MariaDB 11.4.8, 37 PHP checks and 4 browser tests passed. PHPStan level 5 and TypeScript passed. [GitHub Actions run 36177575696](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/36177575696) also passed PHP 8.3/MySQL 8 integration and browser tests, lint, static analysis, the existing 49 TypeScript unit tests, production bundle generation, and release packaging.
+Current UX-branch local verification: PHP 8.5.11 / MariaDB 11.4.8, 44 PHP checks and 23 browser tests passed, alongside PHP syntax, PHPStan level 5, lint, TypeScript, 49 TypeScript unit tests, production assets, and release packaging. See the [execution results and screenshots](../../docs/implementation/UAT_UX_IMPROVEMENTS.md). Historical baseline [GitHub Actions run 36177575696](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/36177575696) passed PHP 8.3/MySQL 8 validation; it is not evidence for this new branch.
 
-Deployment checkpoint (2026-09-25): private files are uploaded to `/home/chrrai4/ai-governance-php/`; public files are uploaded to `/home/chrrai4/changedevelop.org/ai/`. HTTPS renders the PHP/MySQL Version page and correctly reports that configuration is missing. The separate `changedevelop_ai` database form is prepared in DreamHost; credential entry and creation require the account owner's action. Database configuration, migration/seed, and the hosted acceptance scenario remain outstanding. The platform is not yet usable on DreamHost.
+The existing hosted demonstration is [changedevelop.org/ai/](https://www.changedevelop.org/ai/). This feature branch does not deploy automatically. After review, rebuild and upload its assets using the layout above, then verify the hosted synthetic scenario before follow-up UAT.
 
 ## Known limitations and roadmap
 

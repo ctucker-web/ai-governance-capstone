@@ -1,4 +1,19 @@
 import type { ReactNode } from "react";
+const statusDescriptions: Record<string, string> = {
+  DRAFT: "You have started but not submitted this assessment.",
+  SUBMITTED: "Your assessment has been submitted for human review.",
+  UNDER_REVIEW: "Your assessment is waiting for a human decision.",
+  NEEDS_INFORMATION:
+    "The reviewer needs additional details. Update the assessment and submit it again.",
+  CONDITIONALLY_APPROVED:
+    "The reviewer approved the use subject to specified conditions. Check the mitigation commitments.",
+  APPROVED: "The reviewer recorded approval.",
+  REJECTED: "The reviewer did not approve the proposed use.",
+  REASSESSMENT_DUE: "The AI use needs another review.",
+  ARCHIVED: "This assessment is retained as a historical record.",
+};
+export const statusDescription = (value: string) =>
+  statusDescriptions[value] ?? "";
 export const human = (value: string) =>
   value === "EXECUTIVE_EXCEPTION"
     ? "Executive exception"

@@ -1474,3 +1474,216 @@ pre {
     margin: 0;
   }
 }
+/* UAT guidance extends the shared visual system without changing workflow rules. */
+.requester-welcome {
+  background: #eaf2eb;
+  border: 1px solid #c1d8c9;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 22px;
+}
+.requester-welcome h1 {
+  font-size: clamp(26px, 2.6vw, 36px);
+  max-width: 740px;
+}
+.requester-welcome > p {
+  max-width: 690px;
+  color: #36534a;
+}
+.requester-welcome .welcome-lead {
+  font-size: 19px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.entry-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 24px;
+}
+.start-assessment {
+  font-size: 16px;
+  min-height: 50px;
+  padding: 14px 22px;
+  box-shadow: 0 3px 0 #164936;
+}
+.entry-actions .text-button {
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.process-guide {
+  margin: 0 0 30px;
+}
+.process-guide > h2 {
+  font-size: 19px;
+}
+.process-guide ol {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.process-guide li {
+  display: flex;
+  gap: 12px;
+}
+.process-guide li > span {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #94b9a3;
+  border-radius: 50%;
+  color: #174f3a;
+  background: #eaf2eb;
+  font-weight: 700;
+}
+.process-guide h3 {
+  margin: 2px 0 5px;
+  font-size: 15px;
+}
+.process-guide p {
+  margin-bottom: 0;
+}
+.advisory-note {
+  border-left: 3px solid var(--green);
+  padding: 9px 14px;
+  color: #36534a;
+  background: #eef4ef;
+}
+.dashboard-records-heading {
+  font-size: 19px;
+  margin: 24px 0 14px;
+}
+.submission-confirmation {
+  max-width: 850px;
+  padding: 36px;
+}
+.confirmation-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--green);
+  margin-bottom: 20px;
+}
+.confirmation-details {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  background: var(--soft);
+  padding: 20px;
+  border-radius: 8px;
+}
+.confirmation-details dt {
+  font-weight: 700;
+}
+.confirmation-details dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.record-status-help {
+  color: #36534a;
+  margin: 0 0 20px;
+}
+.intake-step-state {
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+.intake-progress-label {
+  font-weight: 700;
+  color: var(--green);
+}
+.intake-error-link {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  color: inherit;
+  text-align: left;
+  text-decoration: underline;
+}
+.field-error {
+  color: #9b2828;
+  font-weight: 600;
+}
+[aria-invalid="true"] {
+  border-color: #9b2828;
+}
+.intake-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.intake-review-grid dt {
+  font-weight: 700;
+}
+.intake-review-grid dd {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.intake-draft-help {
+  line-height: 1.6;
+}
+.intake-review {
+  margin: 22px 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.intake-review summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 4px 0;
+}
+@media (max-width: 900px) {
+  .process-guide ol {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+@media (max-width: 620px) {
+  .requester-welcome {
+    padding: 22px 18px;
+    margin-bottom: 22px;
+  }
+  .requester-welcome .welcome-lead {
+    font-size: 17px;
+  }
+  .requester-welcome .entry-actions {
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .start-assessment {
+    width: 100%;
+    justify-content: center;
+  }
+  .confirmation-details,
+  .intake-review-grid {
+    grid-template-columns: 1fr;
+  }
+  .submission-confirmation {
+    padding: 22px 18px;
+  }
+  .steps > div {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+  }
+  .intake-step-state {
+    font-size: 10px;
+  }
+}
+.steps > div {
+  color: var(--muted);
+}
+.steps > div.current,
+.steps > div.complete {
+  color: var(--green);
+}

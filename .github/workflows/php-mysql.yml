@@ -3,7 +3,7 @@ on:
   push:
     branches: [feature/php-mysql-version]
   pull_request:
-    branches: [main, development]
+    branches: [main, development, feature/php-mysql-version]
 permissions:
   contents: read
 jobs:
@@ -15,7 +15,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
           MYSQL_DATABASE: governance_php_test
-        ports: ['3306:3306']
+        ports: ["3306:3306"]
         options: >-
           --health-cmd "mysqladmin ping --silent"
           --health-interval 5s --health-timeout 5s --health-retries 20
@@ -33,7 +33,7 @@ jobs:
           cache: pnpm
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: "8.3"
           extensions: pdo_mysql, mbstring
           coverage: none
       - run: pnpm install --frozen-lockfile
