@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -24,11 +24,24 @@ import type { Workspace, GovernanceRecord } from "@/modules/workflow/service";
 import type { Command, Intake } from "@/modules/intake/validation";
 import { approved, effectiveStatus, pending } from "@/modules/auth/policy";
 import { tiers } from "@/modules/risk/engine";
-import { Badge, date, Empty, human, Panel } from "./ui";
+import { Badge, date, Empty, human, Panel, statusDescription } from "./ui";
 import IntakeForm from "./intake-form";
 import RecordDetail from "./record-detail";
 import Administration from "./administration";
-export type Run = (command: Command) => Promise<{ id: string } | undefined>;
+export type Run = (
+  command: Command,
+) => Promise<{ id: string; refreshFailed?: boolean } | undefined>;
+function friendlyActionError(message: unknown) {
+  if (
+    typeof message !== "string" ||
+    /SQLSTATE|Exception|stack trace|TypeError|PDO|Invalid .* value|Unexpected token|fetch|network/i.test(
+      message,
+    )
+  ) {
+    return "We could not confirm the result. Refresh to check the latest status before trying again.";
+  }
+  return message;
+}
 const nav = [
   ["dashboard", "Dashboard", LayoutDashboard],
   ["new", "New assessment", Plus],
@@ -75,6 +88,16 @@ const headings: Record<string, [string, string]> = {
 };
 export default function GovernanceApp({ initial }: { initial: Workspace }) {
   const router = useRouter();
+  const [dirty, setDirty] = useState(false);
+  const [confirmation, setConfirmation] = useState<GovernanceRecord | null>(
+    null,
+  );
+  const mainHeading = useRef<HTMLHeadingElement>(null);
+  const [recovery, setRecovery] = useState<{
+    id: string;
+    submitted: boolean;
+    target: "record" | "policy";
+  } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [ws, setWs] = useState<Workspace>(initial),
     [view, setView] = useState("dashboard"),
@@ -98,6 +121,7 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
     if (!r.ok) throw new Error(data.error);
     setWs(data);
     setNow(Date.now());
+    return data as Workspace;
   }, [router]);
   const run: Run = async (command) => {
     setBusy(true);
@@ -110,8 +134,35 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
         body: JSON.stringify(command),
       });
       const result = await r.json();
-      if (!r.ok) throw new Error(result.error);
-      await refresh();
+      if (!r.ok)
+        throw new Error(
+          r.status >= 500
+            ? "We could not save this change. Please try again."
+            : friendlyActionError(result.error),
+        );
+      let updated: Workspace | undefined;
+      try {
+        updated = await refresh();
+      } catch {
+        // The write was acknowledged. Never retry create because a subsequent read failed.
+        setDirty(false);
+        setRecovery({
+          id: result.id,
+          submitted: command.action === "submit",
+          target: command.action === "configure" ? "policy" : "record",
+        });
+        return { id: result.id, refreshFailed: true };
+      }
+      if (command.action === "submit") {
+        const persisted = updated?.records.find(
+          (item) => item.id === result.id,
+        );
+        if (!persisted)
+          throw new Error(
+            "We could not confirm the assessment status. Check My Assessments before submitting again.",
+          );
+        setConfirmation(persisted);
+      }
       setNotice(
         command.action === "submit"
           ? "Submitted. An independent human reviewer has been assigned."
@@ -122,14 +173,27 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
       return result;
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "The action could not be completed.",
+        e instanceof Error
+          ? friendlyActionError(e.message)
+          : "The action could not be completed. Please try again.",
       );
       return undefined;
     } finally {
       setBusy(false);
     }
   };
+  const mayLeave = () =>
+    !busy &&
+    (!dirty ||
+      window.confirm(
+        "Leave this unfinished assessment? Your unsaved changes will be lost. Choose Cancel to keep working.",
+      ));
   const go = (next: string) => {
+    if (next === view && !selected && !confirmation && !recovery) return;
+    if (!mayLeave()) return;
+    setDirty(false);
+    setConfirmation(null);
+    setRecovery(null);
     setView(next);
     setSelected(null);
     setEditing(false);
@@ -141,10 +205,16 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
     setNotice("");
   };
   const open = (id: string) => {
+    if (!mayLeave()) return;
+    setConfirmation(null);
+    setRecovery(null);
     setSelected(id);
     setEditing(false);
     setError("");
   };
+  useEffect(() => {
+    mainHeading.current?.focus();
+  }, [view, selected, confirmation, recovery]);
   if (!ws)
     return (
       <main className="loading">
@@ -211,7 +281,17 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
         ? { action: "edit", id: record.id, revision: record.revision, data }
         : { action: "create", data },
     );
-    if (!created) return;
+    if (!created)
+      throw new Error(
+        "We could not save your assessment. Your answers are still here; please try again.",
+      );
+    setDirty(false);
+    if (created.refreshFailed) {
+      setSelected(created.id);
+      setEditing(false);
+      setView("inventory");
+      return;
+    }
     if (submit) {
       const result = await run({
         action: "submit",
@@ -222,12 +302,17 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
         setSelected(created.id);
         setEditing(false);
         setView("inventory");
+        setError(
+          "Your assessment was saved as a draft, but submission could not be confirmed. Review its status before trying Submit Assessment again.",
+        );
         return;
       }
     }
     setSelected(created.id);
     setEditing(false);
     setView("inventory");
+    if (!submit)
+      setNotice("Draft saved. It has not been submitted for human review.");
   }
   const filters = (
     <div className="filters">
@@ -300,7 +385,14 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
         Skip to content
       </a>
       <aside className="sidebar">
-        <Link className="brand" href="/">
+        <Link
+          className="brand"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            go("dashboard");
+          }}
+        >
           <span className="brand-mark">
             <Sprout size={25} />
           </span>
@@ -358,6 +450,11 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
           <button
             className="switch-role"
             onClick={async () => {
+              if (!mayLeave()) return;
+              setEditing(false);
+              setView("dashboard");
+              setSelected(null);
+              setDirty(false);
               await fetch("/api/session", { method: "DELETE" });
               router.push("/login");
               router.refresh();
@@ -380,38 +477,165 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
           </span>
         </header>
         <main id="main" className="content">
-          <div className="page-heading">
-            <div>
-              <span className="eyebrow">
-                {record ? "GOVERNANCE RECORD" : human(view).toUpperCase()}
-              </span>
-              <h1>{record ? record.title : headings[view][0]}</h1>
-              <p>
-                {record
-                  ? `${record.department} · ${record.system.vendor}`
-                  : headings[view][1]}
-              </p>
-            </div>
-            {requester && view !== "new" && !record && (
-              <button className="button" onClick={() => go("new")}>
-                <Plus size={17} />
-                New assessment
-              </button>
+          {!confirmation &&
+            !recovery &&
+            !(view === "dashboard" && requester && !record) && (
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">
+                    {record ? "GOVERNANCE RECORD" : human(view).toUpperCase()}
+                  </span>
+                  <h1 ref={mainHeading} tabIndex={-1}>
+                    {record ? record.title : headings[view][0]}
+                  </h1>
+                  <p>
+                    {record
+                      ? `${record.department} · ${record.system.vendor}`
+                      : headings[view][1]}
+                  </p>
+                </div>
+                {requester &&
+                  view !== "new" &&
+                  view !== "dashboard" &&
+                  !record && (
+                    <button className="button" onClick={() => go("new")}>
+                      <Plus size={17} />
+                      Start New Assessment
+                    </button>
+                  )}
+              </div>
             )}
-          </div>
           {error && (
             <div role="alert" className="notice error">
               {error}
             </div>
           )}
-          {notice && (
+          {notice && !confirmation && !recovery && (
             <div role="status" className="notice success">
               {notice}
             </div>
           )}
-          {record ? (
+          {recovery ? (
+            <section className="panel submission-confirmation">
+              <h1 ref={mainHeading} tabIndex={-1}>
+                Your change was saved
+              </h1>
+              <p role="status">
+                {recovery.target === "policy"
+                  ? "The server saved your policy, but we could not load the latest version. Reload the saved policy before making another change."
+                  : "The server saved your change, but we could not load the latest assessment status. Reload the saved record before taking another action."}
+              </p>
+              <p>
+                {recovery.target === "policy" ? "Policy ID:" : "Assessment ID:"}{" "}
+                <span data-testid="recovery-id">{recovery.id}</span>
+              </p>
+              <button
+                className="button"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    const updated = await refresh();
+                    if (recovery.target === "policy") {
+                      if (!updated?.configuration)
+                        throw new Error(
+                          "The saved policy could not be loaded.",
+                        );
+                      setSelected(null);
+                      setView("admin");
+                      setEditing(false);
+                      setRecovery(null);
+                      setError("");
+                      setNotice(
+                        "Policy saved. The latest version is shown below.",
+                      );
+                      return;
+                    }
+                    const saved = updated?.records.find(
+                      (item) => item.id === recovery.id,
+                    );
+                    if (!saved)
+                      throw new Error(
+                        "We could not load that saved record. Please try again.",
+                      );
+                    setSelected(saved.id);
+                    setView("inventory");
+                    setEditing(false);
+                    if (recovery.submitted) setConfirmation(saved);
+                    setRecovery(null);
+                    setError("");
+                  } catch {
+                    setError(
+                      "We could not load the latest status. Please check your connection and try again.",
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                {recovery.target === "policy"
+                  ? "Reload saved policy"
+                  : "Reload saved record"}
+              </button>
+            </section>
+          ) : confirmation ? (
+            <section
+              className="panel submission-confirmation"
+              aria-labelledby="confirmation-heading"
+            >
+              <span className="confirmation-icon" aria-hidden="true">
+                <FileCheck2 size={30} />
+              </span>
+              <h1 id="confirmation-heading" ref={mainHeading} tabIndex={-1}>
+                Assessment Submitted
+              </h1>
+              <p role="status">
+                Your AI use-case assessment has been submitted for human review.
+              </p>
+              <dl className="confirmation-details">
+                <div>
+                  <dt>Assessment ID</dt>
+                  <dd data-testid="assessment-id">{confirmation.id}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd data-testid="persisted-status">
+                    {human(confirmation.status)}
+                  </dd>
+                </div>
+              </dl>
+              <p>{statusDescription(confirmation.status)}</p>
+              <h2>What happens next?</h2>
+              <p>
+                A designated reviewer will examine your assessment, consider the
+                advisory risk classification, and record a decision.
+              </p>
+              <div className="entry-actions">
+                <button
+                  className="button"
+                  onClick={() => open(confirmation.id)}
+                >
+                  View Assessment <ArrowRight size={17} aria-hidden="true" />
+                </button>
+                <button
+                  className="button secondary"
+                  onClick={() => go("dashboard")}
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            </section>
+          ) : record ? (
             <>
-              <button className="back-link" onClick={() => setSelected(null)}>
+              <button
+                className="back-link"
+                onClick={() => {
+                  if (mayLeave()) {
+                    setSelected(null);
+                    setEditing(false);
+                  }
+                }}
+              >
                 <ChevronLeft size={16} />
                 Back to {human(view)}
               </button>
@@ -421,7 +645,10 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
                   record={record}
                   busy={busy}
                   onSave={save}
-                  onCancel={() => setEditing(false)}
+                  onDirtyChange={setDirty}
+                  onCancel={() => {
+                    if (mayLeave()) setEditing(false);
+                  }}
                 />
               ) : (
                 <RecordDetail
@@ -437,6 +664,7 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
             <IntakeForm
               busy={busy}
               onSave={save}
+              onDirtyChange={setDirty}
               onCancel={() => go("dashboard")}
             />
           ) : view === "admin" ? (
@@ -444,7 +672,6 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
           ) : (
             <>
               {[
-                "dashboard",
                 "inventory",
                 "review",
                 "mitigations",
@@ -453,54 +680,152 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
               ].includes(view) && filters}
               {view === "dashboard" && (
                 <>
-                  <section className="welcome">
-                    <div>
-                      <span className="eyebrow">RESPONSIBLE AI, TOGETHER</span>
-                      <h2>
-                        Make room for possibility.
-                        <br />
-                        Keep people at the center.
-                      </h2>
-                      <p>
-                        Every risk classification is a starting point for a
-                        conversation.
-                        <br />
-                        Every final decision belongs to a person.
-                      </p>
-                      <button
-                        className="text-button"
-                        onClick={() =>
-                          go(
-                            requester
-                              ? "new"
-                              : reviewer
-                                ? "review"
-                                : "inventory",
-                          )
-                        }
+                  {requester ? (
+                    <>
+                      <section
+                        className="requester-welcome"
+                        aria-labelledby="requester-welcome-title"
                       >
-                        {requester
-                          ? "Bring an idea forward"
-                          : reviewer
-                            ? "See your review queue"
-                            : "Explore the inventory"}
-                        <ArrowRight size={17} />
-                      </button>
-                    </div>
-                    <div className="welcome-art" aria-hidden="true">
-                      <div className="art-orbit" />
-                      <div className="art-card c1">
-                        <Sprout />
-                        An idea
+                        <span className="eyebrow">
+                          YOUR AI ASSESSMENT STARTS HERE
+                        </span>
+                        <h1
+                          id="requester-welcome-title"
+                          ref={mainHeading}
+                          tabIndex={-1}
+                        >
+                          Welcome to AI Governance
+                        </h1>
+                        <p className="welcome-lead">
+                          Have an idea for using AI at your organization? Start
+                          here.
+                        </p>
+                        <p>
+                          Describe how you want to use AI, answer a few
+                          questions about potential risks, and submit your
+                          assessment for human review.
+                        </p>
+                        <div className="entry-actions">
+                          <button
+                            className="button start-assessment"
+                            onClick={() => go("new")}
+                          >
+                            Start New Assessment{" "}
+                            <ArrowRight size={19} aria-hidden="true" />
+                          </button>
+                          <button
+                            className="text-button"
+                            onClick={() => go("inventory")}
+                          >
+                            View My Assessments
+                          </button>
+                        </div>
+                      </section>
+                      <section
+                        className="process-guide"
+                        aria-labelledby="process-title"
+                      >
+                        <h2 id="process-title">How it works</h2>
+                        <ol>
+                          <li>
+                            <span aria-hidden="true">1</span>
+                            <div>
+                              <h3>Describe your AI idea</h3>
+                              <p>Tell us what you want AI to help with.</p>
+                            </div>
+                          </li>
+                          <li>
+                            <span aria-hidden="true">2</span>
+                            <div>
+                              <h3>Answer risk questions</h3>
+                              <p>
+                                Help identify any privacy, security, or
+                                operational concerns.
+                              </p>
+                            </div>
+                          </li>
+                          <li>
+                            <span aria-hidden="true">3</span>
+                            <div>
+                              <h3>Submit for human review</h3>
+                              <p>
+                                A designated person reviews the assessment and
+                                makes the decision.
+                              </p>
+                            </div>
+                          </li>
+                        </ol>
+                        <p className="advisory-note">
+                          The software provides an advisory risk classification.
+                          A human reviewer makes the final governance decision.
+                        </p>
+                      </section>
+                      {ws.records.length === 0 && (
+                        <Empty title="Your first assessment starts here.">
+                          Use Start New Assessment above to describe an AI idea.
+                          You can save a completed draft before submitting it
+                          for review.
+                        </Empty>
+                      )}
+                    </>
+                  ) : (
+                    <section className="welcome">
+                      <div>
+                        <span className="eyebrow">
+                          RESPONSIBLE AI, TOGETHER
+                        </span>
+                        <h2>
+                          Make room for possibility.
+                          <br />
+                          Keep people at the center.
+                        </h2>
+                        <p>
+                          Every risk classification is a starting point for a
+                          conversation.
+                          <br />
+                          Every final decision belongs to a person.
+                        </p>
+                        <button
+                          className="button"
+                          onClick={() =>
+                            go(
+                              reviewer
+                                ? "review"
+                                : admin
+                                  ? "inventory"
+                                  : "audit",
+                            )
+                          }
+                        >
+                          {reviewer
+                            ? "View Assigned Reviews"
+                            : admin
+                              ? "View AI Inventory"
+                              : "View Governance Records"}
+                          <ArrowRight size={17} />
+                        </button>
                       </div>
-                      <div className="art-card c2">
-                        <ShieldCheck />A thoughtful review
+                      <div className="welcome-art" aria-hidden="true">
+                        <div className="art-orbit" />
+                        <div className="art-card c1">
+                          <Sprout />
+                          An idea
+                        </div>
+                        <div className="art-card c2">
+                          <ShieldCheck />A thoughtful review
+                        </div>
+                        <div className="art-card c3">
+                          <FileCheck2 />A human decision
+                        </div>
                       </div>
-                      <div className="art-card c3">
-                        <FileCheck2 />A human decision
-                      </div>
-                    </div>
-                  </section>
+                    </section>
+                  )}
+                  <h2 className="dashboard-records-heading">
+                    {requester
+                      ? "Your assessments at a glance"
+                      : "Workspace at a glance"}
+                  </h2>
+                  {filters}
                   <div className="metrics">
                     {[
                       [

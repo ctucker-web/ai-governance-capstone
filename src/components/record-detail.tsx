@@ -4,7 +4,16 @@ import { FileCheck2, Pencil, ShieldCheck } from "lucide-react";
 import type { GovernanceRecord, Workspace } from "@/modules/workflow/service";
 import type { Run } from "./governance-app";
 import { approved, canReview, effectiveStatus } from "@/modules/auth/policy";
-import { Badge, date, day, Field, human, Panel, Empty } from "./ui";
+import {
+  Badge,
+  date,
+  day,
+  Field,
+  human,
+  Panel,
+  Empty,
+  statusDescription,
+} from "./ui";
 import { AuditList } from "./governance-app";
 export default function RecordDetail({
   record: r,
@@ -61,11 +70,14 @@ export default function RecordDetail({
                 run({ action: "submit", id: r.id, revision: r.revision })
               }
             >
-              Submit for human review
+              Submit Assessment
             </button>
           )}
         </div>
       </div>
+      <p className="record-status-help">
+        {statusDescription(effectiveStatus(r))}
+      </p>
       <div className="record-meta">
         <span>
           <small>REQUESTER</small>
@@ -161,6 +173,10 @@ export default function RecordDetail({
                 title="A guide for human review"
                 kicker="ADVISORY RISK ASSESSMENT"
               >
+                <p>
+                  A preliminary indication of potential risk. A human reviewer
+                  makes the final decision.
+                </p>
                 {assessment ? (
                   <>
                     <div className="risk-summary">
@@ -538,6 +554,10 @@ export default function RecordDetail({
         )}
         {tab === "mitigations" && (
           <Panel title="Mitigation commitments">
+            <p>
+              A mitigation is a requirement or safeguard that reduces an
+              identified risk.
+            </p>
             {r.mitigations.map((m) => (
               <article className="mitigation-card" key={m.id}>
                 <div className="panel-heading">
