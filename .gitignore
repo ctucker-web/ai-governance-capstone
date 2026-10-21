@@ -51,3 +51,8 @@ next-env.d.ts
 playwright-report/
 test-results/
 .pnpm-store/
+versions/php-mysql/config.local.php
+versions/php-mysql/public/deployment-path.php
+versions/php-mysql/public/assets/
+versions/php-mysql/vendor/
+versions/php-mysql/.phpstan-cache/
