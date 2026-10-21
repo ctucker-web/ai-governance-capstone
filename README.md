@@ -4,6 +4,8 @@ MSIT 5910 Capstone Project
 
 Platform implementations are tracked in [VERSIONS.md](VERSIONS.md). The separate [PHP/MySQL Version](versions/php-mysql/README.md) targets existing DreamHost shared hosting; the root application remains the Next.js/PostgreSQL Version.
 
+Requester guidance changes prompted by six human UAT sessions are documented in [UAT-driven UX improvements](docs/implementation/UAT_UX_IMPROVEMENTS.md), with a [follow-up human UAT protocol](docs/testing/UAT_UX_FOLLOWUP_PROTOCOL.md). The PHP/MySQL build reuses the shared React components, so rebuilding either implementation includes these interface improvements; PHP backend governance rules and deployment architecture remain unchanged. Consult the implementation document for actual verification and deployment status.
+
 ## Overview
 
 This repository contains the design, documentation, source code, test assets, and release materials for a lightweight AI Governance Risk and Approval Platform intended for nonprofit organizations. The platform is designed to help organizations identify, assess, approve, document, and monitor artificial intelligence use in a consistent and auditable way.
@@ -148,7 +150,7 @@ An administrator is not automatically an approver. Requesters cannot approve the
 
 Try the acceptance workflow:
 
-1. Choose Requester, then **New assessment**. Enter a fictional clinical documentation use case, people affected, data categories, oversight, and vendor controls.
+1. Choose Requester, then **Start New Assessment**. Enter a fictional clinical documentation use case, people affected, data categories, oversight, and vendor controls.
 2. Answer all eight risk questions. Highly sensitive data with limited vendor assurance must escalate to High. Submit and inspect the contributing factors and assigned reviewer.
 3. Select **Switch demo identity**, choose Taylor Chen, and open the request from **Review queue**.
 4. Review the **Evidence** section; add a reference if needed. In **Overview**, choose conditional approval, enter rationale, and require “Human verification required before AI-generated content enters the official record.” Set an owner and due date.
