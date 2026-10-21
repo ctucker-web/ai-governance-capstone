@@ -4,7 +4,7 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: /Requester/ }).click();
   await page
-    .getByRole("button", { name: "New assessment", exact: true })
+    .getByRole("button", { name: "Start New Assessment", exact: true })
     .first()
     .click();
   for (const [label, value] of [
@@ -46,7 +46,13 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
   ])
     await page.getByLabel(label, { exact: false }).selectOption(value);
   await page
-    .getByRole("button", { name: "Submit for human review", exact: true })
+    .getByRole("button", { name: "Submit Assessment", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Assessment Submitted", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "View Assessment", exact: true })
     .click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
   await expect(
@@ -157,7 +163,13 @@ test("clinical documentation acceptance scenario", async ({ page }) => {
     page.getByRole("button", { name: "Edit draft", exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Submit for human review", exact: true })
+    .getByRole("button", { name: "Submit Assessment", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Assessment Submitted", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "View Assessment", exact: true })
     .click();
   await expect(page.getByText(/Assessment v2 ·/)).toBeVisible();
   await page.getByRole("tab", { name: "History", exact: true }).click();
@@ -227,7 +239,7 @@ test("mobile intake navigation stays usable", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: /Requester/ }).click();
   await page
-    .getByRole("button", { name: "New assessment", exact: true })
+    .getByRole("button", { name: "Start New Assessment", exact: true })
     .first()
     .click();
   await expect(page.getByLabel("Use-case name")).toBeVisible();
