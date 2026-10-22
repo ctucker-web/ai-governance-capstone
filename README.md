@@ -4,6 +4,8 @@ MSIT 5910 Capstone Project
 
 Platform implementations are tracked in [VERSIONS.md](VERSIONS.md). The separate [PHP/MySQL Version](versions/php-mysql/README.md) targets existing DreamHost shared hosting; the root application remains the Next.js/PostgreSQL Version.
 
+The alternative [WordPress Plugin Version](versions/wordpress/README.md) packages the interface and governance workflow into one installable PHP file, using existing WordPress accounts and the site's database connection. It is developed separately on `feature/wordpress-plugin-version`.
+
 Requester guidance changes prompted by six human UAT sessions are documented in [UAT-driven UX improvements](docs/implementation/UAT_UX_IMPROVEMENTS.md), with a [follow-up human UAT protocol](docs/testing/UAT_UX_FOLLOWUP_PROTOCOL.md). The PHP/MySQL build reuses the shared React components, so rebuilding either implementation includes these interface improvements; PHP backend governance rules and deployment architecture remain unchanged. Consult the implementation document for actual verification and deployment status.
 
 ## Overview
