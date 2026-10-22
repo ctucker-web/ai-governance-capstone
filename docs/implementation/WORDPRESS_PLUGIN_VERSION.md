@@ -115,6 +115,8 @@ Use WP-CLI's `--use-include` option so PHP 8.3 executes the test file directly w
 
 The WordPress CI uses the Ubuntu 24.04 runner's installed Chrome through Playwright's supported `chrome` channel and records its version. Local tests default to bundled Chromium. This avoids a stalled browser dependency-install step while retaining the same eight browser tests and assertions. Set `WP_BROWSER_CHANNEL=chrome` to reproduce that browser selection locally. [Runner software inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md), [Playwright browser channels](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge)
 
+The isolated CI installation explicitly configures `WP_HOME` and `WP_SITEURL` to match the PHP server's origin and verifies the generated login form URL. Without those settings, WordPress inferred a filesystem subdirectory in its login URL and browser submissions returned 404. This correction applies only to the temporary test site's configuration; the plugin continues to use WordPress-generated URLs for sites installed at either the domain root or a subdirectory.
+
 Actual local application screenshots, using synthetic WordPress accounts:
 
 ![WordPress requester dashboard at 1440px](images/wordpress/requester-desktop.png)

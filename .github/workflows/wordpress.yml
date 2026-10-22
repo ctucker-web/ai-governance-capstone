@@ -88,7 +88,14 @@ jobs:
           wp config set DISABLE_WP_CRON true --raw
           wp config set WP_AUTO_UPDATE_CORE false --raw
           wp config set WP_ENVIRONMENT_TYPE local
+          # The PHP server serves WordPress at the origin root, independently
+          # of the checkout's nested filesystem path.
+          wp config set WP_HOME "$WP_TEST_URL"
+          wp config set WP_SITEURL "$WP_TEST_URL"
           wp core install --url="$WP_TEST_URL" --title="AI Governance Synthetic CI" --admin_user=aigwp_bootstrap_admin --admin_password="$WP_TEST_PASSWORD" --admin_email=bootstrap@example.invalid --skip-email
+          test "$(wp option get home)" = "$WP_TEST_URL"
+          test "$(wp option get siteurl)" = "$WP_TEST_URL"
+          test "$(wp eval 'echo site_url("wp-login.php", "login_post");')" = "$WP_TEST_URL/wp-login.php"
           wp plugin install "$GITHUB_WORKSPACE/versions/wordpress/dist/ai-governance-wordpress.zip" --activate
       - name: Test WordPress identity and governance persistence on MySQL 8
         run: |

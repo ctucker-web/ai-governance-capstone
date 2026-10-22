@@ -129,6 +129,12 @@ test("logged-out visitors and WordPress subscribers cannot open governance data"
   await expect(page).toHaveURL(/wp-login\.php/);
   await signIn(page, "outsider");
   await expect(
+    page.getByText(
+      "Your WordPress account needs an AI Governance role. Contact your site administrator.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
     page.getByRole("button", { name: "Start New Assessment", exact: true }),
   ).toHaveCount(0);
   expect([401, 403]).toContain((await page.request.get(restPath)).status());
