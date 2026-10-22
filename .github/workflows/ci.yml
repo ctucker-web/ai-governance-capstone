@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, development]
   pull_request:
-    branches: [main, development, feature/php-mysql-version]
+    branches: [main, development, feature/php-mysql-version, feature/uat-requester-ux]
 
 permissions:
   contents: read

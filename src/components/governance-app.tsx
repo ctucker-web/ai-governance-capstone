@@ -86,7 +86,18 @@ const headings: Record<string, [string, string]> = {
     "Configure advisory scoring, reviewer routing, and review intervals.",
   ],
 };
-export default function GovernanceApp({ initial }: { initial: Workspace }) {
+export default function GovernanceApp({
+  initial,
+  presentation,
+}: {
+  initial: Workspace;
+  presentation?: {
+    workspaceName: string;
+    environmentLabel: string;
+    identityLabel: string;
+    identityAction: () => void;
+  };
+}) {
   const router = useRouter();
   const [dirty, setDirty] = useState(false);
   const [confirmation, setConfirmation] = useState<GovernanceRecord | null>(
@@ -403,7 +414,10 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
         </Link>
         <div className="workspace-label">
           <span className="workspace-dot" />
-          Community Partners<small>Demonstration workspace</small>
+          {presentation?.workspaceName ?? "Community Partners"}
+          <small>
+            {presentation?.environmentLabel ?? "Demonstration workspace"}
+          </small>
         </div>
         <span className="nav-label">WORKSPACE</span>
         <nav aria-label="Main navigation">
@@ -455,13 +469,17 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
               setView("dashboard");
               setSelected(null);
               setDirty(false);
+              if (presentation) {
+                presentation.identityAction();
+                return;
+              }
               await fetch("/api/session", { method: "DELETE" });
               router.push("/login");
               router.refresh();
             }}
           >
             <LogOut size={15} />
-            Switch demo identity
+            {presentation?.identityLabel ?? "Switch demo identity"}
           </button>
         </div>
       </aside>
@@ -1061,7 +1079,10 @@ export default function GovernanceApp({ initial }: { initial: Workspace }) {
             </>
           )}
           <footer className="footer">
-            <span>AI Governance · Academic MVP</span>
+            <span>
+              AI Governance ·{" "}
+              {presentation ? "WordPress Plugin Version" : "Academic MVP"}
+            </span>
             <span>Synthetic data only · Human accountability, always</span>
           </footer>
         </main>

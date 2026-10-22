@@ -1,0 +1,127 @@
+name: WordPress Plugin Version
+
+on:
+  push:
+    branches: [feature/wordpress-plugin-version]
+  pull_request:
+    branches: [main, feature/php-mysql-version, feature/uat-requester-ux]
+
+permissions:
+  contents: read
+
+jobs:
+  wordpress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+          MYSQL_DATABASE: governance_wp_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "mysqladmin ping --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      MYSQL_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+      WP_TEST_URL: http://localhost:3300
+      WP_BROWSER_CHANNEL: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mysqli, mbstring
+          coverage: none
+      - run: pnpm install --frozen-lockfile
+      - name: Build and verify the single-file release
+        run: |
+          mkdir -p .local
+          node versions/wordpress/build.mjs
+          cp versions/wordpress/dist/SHA256SUMS .local/wordpress-first-build.sha256
+          node versions/wordpress/build.mjs
+          cmp .local/wordpress-first-build.sha256 versions/wordpress/dist/SHA256SUMS
+          (cd versions/wordpress/dist && sha256sum --check SHA256SUMS)
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          release = Path("versions/wordpress/dist")
+          with ZipFile(release / "ai-governance-wordpress.zip") as archive:
+              expected = "ai-governance/ai-governance-wordpress.php"
+              assert archive.namelist() == [expected], "Release must contain exactly one PHP file"
+              assert archive.testzip() is None, "ZIP integrity check failed"
+              assert archive.read(expected) == (release / "ai-governance-wordpress.php").read_bytes(), "ZIP and PHP differ"
+          print("Reproducible release, SHA256 hashes, and single-file ZIP verified")
+          PY
+      - name: Check all WordPress PHP syntax
+        run: find versions/wordpress -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Generate ephemeral synthetic account password
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          printf 'WP_TEST_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+      - name: Download and verify pinned WordPress tooling
+        run: |
+          curl -fsSL --retry 3 https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar -o .local/wp-cli.phar
+          # SHA256 published for the official WP-CLI v2.12.0 release asset.
+          echo 'ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c  .local/wp-cli.phar' | sha256sum --check -
+          curl -fsSL --retry 3 https://wordpress.org/wordpress-7.1.3.tar.gz -o .local/wordpress-7.1.3.tar.gz
+          # WordPress publishes this digest at wordpress-7.1.3.tar.gz.sha1.
+          echo '491a78c7676b15dffcc69130c6054b8f49228a91  .local/wordpress-7.1.3.tar.gz' | sha1sum --check -
+          mkdir -p .local/wordpress-ci
+          tar -xzf .local/wordpress-7.1.3.tar.gz -C .local/wordpress-ci
+          php .local/wp-cli.phar --version
+          php .local/wp-cli.phar --path=.local/wordpress-ci/wordpress core verify-checksums --version=7.1.3 --locale=en_US
+      - name: Install WordPress and activate the generated plugin
+        run: |
+          wp() { php "$GITHUB_WORKSPACE/.local/wp-cli.phar" --path="$GITHUB_WORKSPACE/.local/wordpress-ci/wordpress" "$@"; }
+          wp config create --dbname=governance_wp_test --dbuser=root --dbpass="$MYSQL_PASSWORD" --dbhost=127.0.0.1:3306
+          wp config set DISABLE_WP_CRON true --raw
+          wp config set WP_AUTO_UPDATE_CORE false --raw
+          wp config set WP_ENVIRONMENT_TYPE local
+          # The PHP server serves WordPress at the origin root, independently
+          # of the checkout's nested filesystem path.
+          wp config set WP_HOME "$WP_TEST_URL"
+          wp config set WP_SITEURL "$WP_TEST_URL"
+          wp core install --url="$WP_TEST_URL" --title="AI Governance Synthetic CI" --admin_user=aigwp_bootstrap_admin --admin_password="$WP_TEST_PASSWORD" --admin_email=bootstrap@example.invalid --skip-email
+          test "$(wp option get home)" = "$WP_TEST_URL"
+          test "$(wp option get siteurl)" = "$WP_TEST_URL"
+          test "$(wp eval 'echo site_url("wp-login.php", "login_post");')" = "$WP_TEST_URL/wp-login.php"
+          wp plugin install "$GITHUB_WORKSPACE/versions/wordpress/dist/ai-governance-wordpress.zip" --activate
+      - name: Test WordPress identity and governance persistence on MySQL 8
+        run: |
+          wp() { php "$GITHUB_WORKSPACE/.local/wp-cli.phar" --path="$GITHUB_WORKSPACE/.local/wordpress-ci/wordpress" "$@"; }
+          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/fixtures.php" --use-include
+          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/integration.php" --use-include
+      - name: Verify runner-provided Chrome
+        run: google-chrome --version
+      - name: Run all WordPress browser acceptance tests
+        timeout-minutes: 10
+        run: |
+          php -S localhost:3300 -t .local/wordpress-ci/wordpress > .local/wordpress-server.log 2>&1 &
+          PHP_SERVER_PID=$!
+          trap 'kill "$PHP_SERVER_PID"' EXIT
+          curl --max-time 15 --retry 10 --retry-connrefused --retry-delay 1 --fail --silent --show-error --output /dev/null "$WP_TEST_URL/wp-login.php"
+          pnpm exec playwright test --config versions/wordpress/playwright.config.ts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WordPress-Plugin-Version
+          path: versions/wordpress/dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: wordpress-test-results
+          path: |
+            test-results/wordpress/
+            .local/wordpress-server.log
+          include-hidden-files: true

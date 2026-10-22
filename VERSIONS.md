@@ -5,8 +5,8 @@ The platform will have at least three distinct implementations. Versions are pre
 | Version | Name | Status | Source |
 | --- | --- | --- | --- |
 | 1 | Next.js/PostgreSQL Version | Verified working MVP: 63 tests, production build and Docker CI passed | Root application; tag `platform-v1-nextjs-postgresql`; commit `d28af42f4c025aa67d5e4303b034c28760143c9b`; PR #4 |
-| 2 | PHP/MySQL Version | **Selected implementation for the remainder of the MSIT 5910 capstone.** 37 PHP checks and 4 browser tests pass on PHP 8.3/MySQL 8 CI; files uploaded to DreamHost, database configuration pending | `versions/php-mysql/`; branch `feature/php-mysql-version`; PR #5; milestone tags `php-mysql-v0.1.0-initial` and `php-mysql-v0.2.0-tested`; target `https://www.changedevelop.org/ai/` |
-| 3 | To be defined | Reserved; requirements and technology not yet chosen | No implementation claimed |
+| 2 | PHP/MySQL Version | **Selected capstone implementation.** Existing hosted demonstration; Requester UX branch adds verified guidance with 44 PHP checks and 23 PHP browser tests. See PR #7 for the tested update and deployment status. | `versions/php-mysql/`; branch `feature/php-mysql-version`; PR #5; UX branch `feature/uat-requester-ux`; PR #7; hosted demonstration `https://www.changedevelop.org/ai/` |
+| 3 | WordPress Plugin Version | Alternative single-file plugin using existing WordPress login, capabilities, and database connection; 33 WordPress integration checks and 8 browser tests passed locally and in GitHub Actions. No hosted installation claimed. | [`versions/wordpress/`](versions/wordpress/README.md); branch `feature/wordpress-plugin-version`; [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8); [implementation notes](docs/implementation/WORDPRESS_PLUGIN_VERSION.md) |
 
 ## Capstone implementation decision
 
@@ -15,6 +15,8 @@ Beginning with the core-logic and testing phase, the PHP/MySQL Version is the im
 Version 1 remains preserved as a completed alternative architecture and historical comparison. It is not deleted or rewritten.
 
 Version 1 uses a Node.js application server and PostgreSQL. The PHP/MySQL Version runs PHP per request and uses the existing MySQL hosting allowance, with prebuilt browser assets and no persistent Node.js process. It reuses the established UI, workflows and advisory scoring rules. Its server implementation, schema, deployment package and validation are separate.
+
+Version 3 packages the shared React interface and PHP governance logic into one generated WordPress plugin file. WordPress supplies authentication and the database connection, while the plugin enforces governance capabilities, ownership and independent human review. Its own prefixed tables preserve assessments, policy versions and audit history. It is a separately installable alternative, not a migration of the existing `/ai/` demonstration or a change to the selected capstone track. See its installation instructions before using it on a WordPress site.
 
 DreamHost shared MySQL cannot create the PostgreSQL history-protection triggers. The PHP/MySQL Version therefore documents and tests application-level append-only history controls and an HMAC-linked audit chain; these are not equivalent to PostgreSQL database-enforced immutability.
 

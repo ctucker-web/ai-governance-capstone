@@ -3,7 +3,7 @@ on:
   push:
     branches: [feature/php-mysql-version]
   pull_request:
-    branches: [main, development, feature/php-mysql-version]
+    branches: [main, development, feature/php-mysql-version, feature/uat-requester-ux]
 permissions:
   contents: read
 jobs:
