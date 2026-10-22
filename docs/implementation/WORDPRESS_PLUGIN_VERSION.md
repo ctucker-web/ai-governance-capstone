@@ -101,12 +101,14 @@ During verification, a local test configuration warning prevented cookie headers
 To reproduce against an isolated WordPress test installation with a database name ending in `_test`, activate the generated plugin, set an ephemeral `WP_TEST_PASSWORD` of at least 20 characters, and run:
 
 ```sh
-wp --path=/path/to/test-wordpress eval-file versions/wordpress/tests/fixtures.php
-wp --path=/path/to/test-wordpress eval-file versions/wordpress/tests/integration.php
+wp --path=/path/to/test-wordpress eval-file versions/wordpress/tests/fixtures.php --use-include
+wp --path=/path/to/test-wordpress eval-file versions/wordpress/tests/integration.php --use-include
 WP_TEST_URL=http://localhost:3300 pnpm exec playwright test --config versions/wordpress/playwright.config.ts
 ```
 
 Fixtures create only synthetic test accounts and disable outbound account mail within the fixture process. Never run them against a real site. The full reproducible environment is defined in `.github/workflows/wordpress.yml`.
+
+Use WP-CLI's `--use-include` option so PHP 8.3 executes the test file directly with its strict-types declaration. The default eval wrapper failed in the first CI attempt; this runner correction preserves strict typing and every assertion. [WP-CLI eval-file options](https://developer.wordpress.org/cli/commands/eval-file/)
 
 Actual local application screenshots, using synthetic WordPress accounts:
 

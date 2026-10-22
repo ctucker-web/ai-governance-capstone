@@ -92,8 +92,8 @@ jobs:
       - name: Test WordPress identity and governance persistence on MySQL 8
         run: |
           wp() { php "$GITHUB_WORKSPACE/.local/wp-cli.phar" --path="$GITHUB_WORKSPACE/.local/wordpress-ci/wordpress" "$@"; }
-          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/fixtures.php"
-          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/integration.php"
+          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/fixtures.php" --use-include
+          wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/integration.php" --use-include
       - name: Run all WordPress browser acceptance tests
         run: |
           pnpm exec playwright install --with-deps chromium
