@@ -17,6 +17,9 @@ async function signIn(page: Page, role = "requester") {
       baseUrl,
     ).href,
   );
+  // WordPress focuses this field after a 200ms timer. Wait for that native
+  // behavior before typing, so it cannot steal focus during password entry.
+  await expect(page.locator("#user_login")).toBeFocused();
   await page.locator("#user_login").fill(`aigwp_${role}_test`);
   await page.locator("#user_pass").fill(password!);
   await page.locator("#wp-submit").click();
