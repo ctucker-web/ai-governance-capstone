@@ -86,15 +86,18 @@ Verification must use a real isolated WordPress installation and synthetic accou
 | PHP syntax | Passed locally | `php -l` on the generated plugin and every WordPress source/test PHP file |
 | TypeScript and lint | Passed locally | `pnpm typecheck` / `pnpm lint` |
 | Existing unit regressions | 49 passed locally | `pnpm test` |
-| Real WordPress activation, identity, recovery and governance integration | 33 passed locally | WP-CLI `eval-file versions/wordpress/tests/integration.php`; includes 320 classifier parity evaluations against the existing PHP algorithm |
+| Real WordPress activation, identity, recovery and governance integration | 33 passed locally and on PHP 8.3/MySQL 8 in GitHub Actions | WP-CLI `eval-file versions/wordpress/tests/integration.php --use-include`; includes 320 classifier parity evaluations against the existing PHP algorithm |
 | WordPress cookie login, nonce enforcement, role separation, full lifecycle, administration, mobile and keyboard | 8 passed locally | `pnpm exec playwright test --config versions/wordpress/playwright.config.ts` |
 | Original production application build | Passed locally | `pnpm build` |
-| Existing PHP/MySQL and PostgreSQL integration/browser suites | CI pending for this branch | Retained complete workflows also run for PRs targeting the UX baseline branch |
+| Existing PHP/MySQL checks, static analysis and browser suite | Passed in GitHub Actions | 44 PHP checks, PHPStan, 23 browser tests, build and deployment packaging; [verified run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784275544) |
+| Original PostgreSQL integration/browser and production pipeline | Passed in GitHub Actions | Unit/integration/browser tests, production build, dependency audit, container build and smoke test; [verified run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784742013) |
 | Hosted WordPress installation | Not performed | No live site changes authorized as part of branch creation |
 
 Required negative cases include unauthenticated reads/writes, missing or invalid nonce, a valid nonce without governance capabilities, actor/role spoofing, requester self-approval, administrator bypass of independent assignment, stale revisions, invalid intake, missing decision rationale, conditional approval without mitigation, and revoked capability access. Positive cases include first-run routing, persisted submission, a valid independent decision, evidence/mitigation/reassessment, unchanged older snapshots, and audit verification.
 
 Local runtime: Windows, WordPress 7.1.3, WP-CLI 2.12.0, PHP 8.5.11, MariaDB 11.4.8, Chromium. The CI workflow pins WordPress 7.1.3 and WP-CLI 2.12.0 with checked download digests and uses PHP 8.3/MySQL 8.0. It installs the generated ZIP, runs the same tests, verifies reproducible packaging and publishes `WordPress-Plugin-Version` as a GitHub Actions artifact. Earlier WordPress releases, including the declared 6.6 minimum, have not been separately exercised.
+
+The [WordPress CI run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784741902) records the PHP 8.3/MySQL 8 results and release artifact. [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8) contains the latest check status. These are code and synthetic workflow checks, not a hosted deployment or human UAT result.
 
 During verification, a local test configuration warning prevented cookie headers, and the synthetic administrator fixture initially handled an existing account password incorrectly. Those fixture/setup problems were corrected. Browser tests also exposed an HTML-encoded logout URL, which is now decoded before passing to JavaScript, and a race with WordPress's delayed login autofocus; tests wait for the native focus before typing. These failures were not skipped. WP-CLI 2.12 emits an upstream PHP 8.5 deprecation warning locally; it does not prevent the checks from passing.
 
