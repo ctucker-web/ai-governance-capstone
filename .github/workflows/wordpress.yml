@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   wordpress:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       mysql:
@@ -26,6 +26,7 @@ jobs:
     env:
       MYSQL_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
       WP_TEST_URL: http://localhost:3300
+      WP_BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -94,9 +95,8 @@ jobs:
           wp() { php "$GITHUB_WORKSPACE/.local/wp-cli.phar" --path="$GITHUB_WORKSPACE/.local/wordpress-ci/wordpress" "$@"; }
           wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/fixtures.php" --use-include
           wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/integration.php" --use-include
-      - name: Install browser runtime
-        timeout-minutes: 10
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify runner-provided Chrome
+        run: google-chrome --version
       - name: Run all WordPress browser acceptance tests
         timeout-minutes: 10
         run: |

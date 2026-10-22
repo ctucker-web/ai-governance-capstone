@@ -9,6 +9,7 @@ export default defineConfig({
   use: {
     baseURL: process.env.WP_TEST_URL || "http://localhost:3300",
     trace: "retain-on-failure",
+    channel: process.env.WP_BROWSER_CHANNEL || undefined,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

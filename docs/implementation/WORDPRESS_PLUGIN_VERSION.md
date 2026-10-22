@@ -97,7 +97,7 @@ Required negative cases include unauthenticated reads/writes, missing or invalid
 
 Local runtime: Windows, WordPress 7.1.3, WP-CLI 2.12.0, PHP 8.5.11, MariaDB 11.4.8, Chromium. The CI workflow pins WordPress 7.1.3 and WP-CLI 2.12.0 with checked download digests and uses PHP 8.3/MySQL 8.0. It installs the generated ZIP, runs the same tests, verifies reproducible packaging and publishes `WordPress-Plugin-Version` as a GitHub Actions artifact. Earlier WordPress releases, including the declared 6.6 minimum, have not been separately exercised.
 
-The [WordPress CI run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784741902) records the PHP 8.3/MySQL 8 results and release artifact. [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8) contains the latest check status. These are code and synthetic workflow checks, not a hosted deployment or human UAT result.
+The WordPress CI check on [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8) records the latest PHP 8.3/MySQL 8 results. Successful runs publish the release artifact. These are code and synthetic workflow checks, not a hosted deployment or human UAT result.
 
 During verification, a local test configuration warning prevented cookie headers, and the synthetic administrator fixture initially handled an existing account password incorrectly. Those fixture/setup problems were corrected. Browser tests also exposed an HTML-encoded logout URL, which is now decoded before passing to JavaScript, and a race with WordPress's delayed login autofocus; tests wait for the native focus before typing. These failures were not skipped. WP-CLI 2.12 emits an upstream PHP 8.5 deprecation warning locally; it does not prevent the checks from passing.
 
@@ -112,6 +112,8 @@ WP_TEST_URL=http://localhost:3300 pnpm exec playwright test --config versions/wo
 Fixtures create only synthetic test accounts and disable outbound account mail within the fixture process. Never run them against a real site. The full reproducible environment is defined in `.github/workflows/wordpress.yml`.
 
 Use WP-CLI's `--use-include` option so PHP 8.3 executes the test file directly with its strict-types declaration. The default eval wrapper failed in the first CI attempt; this runner correction preserves strict typing and every assertion. [WP-CLI eval-file options](https://developer.wordpress.org/cli/commands/eval-file/)
+
+The WordPress CI uses the Ubuntu 24.04 runner's installed Chrome through Playwright's supported `chrome` channel and records its version. Local tests default to bundled Chromium. This avoids a stalled browser dependency-install step while retaining the same eight browser tests and assertions. Set `WP_BROWSER_CHANNEL=chrome` to reproduce that browser selection locally. [Runner software inventory](https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md), [Playwright browser channels](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge)
 
 Actual local application screenshots, using synthetic WordPress accounts:
 
