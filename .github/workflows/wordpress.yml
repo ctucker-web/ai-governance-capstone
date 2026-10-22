@@ -94,13 +94,16 @@ jobs:
           wp() { php "$GITHUB_WORKSPACE/.local/wp-cli.phar" --path="$GITHUB_WORKSPACE/.local/wordpress-ci/wordpress" "$@"; }
           wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/fixtures.php" --use-include
           wp eval-file "$GITHUB_WORKSPACE/versions/wordpress/tests/integration.php" --use-include
+      - name: Install browser runtime
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run all WordPress browser acceptance tests
+        timeout-minutes: 10
         run: |
-          pnpm exec playwright install --with-deps chromium
           php -S localhost:3300 -t .local/wordpress-ci/wordpress > .local/wordpress-server.log 2>&1 &
           PHP_SERVER_PID=$!
           trap 'kill "$PHP_SERVER_PID"' EXIT
-          curl --retry 10 --retry-connrefused --retry-delay 1 --fail --silent --output /dev/null "$WP_TEST_URL/wp-login.php"
+          curl --max-time 15 --retry 10 --retry-connrefused --retry-delay 1 --fail --silent --show-error --output /dev/null "$WP_TEST_URL/wp-login.php"
           pnpm exec playwright test --config versions/wordpress/playwright.config.ts
       - uses: actions/upload-artifact@v4
         with:
