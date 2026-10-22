@@ -3,7 +3,7 @@
 **Version:** 3, an alternative to the existing Next.js/PostgreSQL and PHP/MySQL implementations.  
 **Branch:** `feature/wordpress-plugin-version`.  
 **Baseline:** tested Requester UX at `0f9cf2a`, including the dependency audit fixes.  
-**Status:** implemented and locally verified on 2026-10-22; GitHub checks run separately for each implementation. No live site installation is claimed.
+**Status:** implemented and verified locally and in WordPress GitHub Actions on 2026-10-22. GitHub checks run separately for each implementation. No live site installation is claimed.
 
 ## Scope and architecture
 
@@ -82,12 +82,12 @@ Verification must use a real isolated WordPress installation and synthetic accou
 
 | Check | Result | Evidence/command |
 | --- | --- | --- |
-| Single-file generation and ZIP contents | Passed locally | `node versions/wordpress/build.mjs`; archive has exactly one entry whose SHA256 equals the PHP file |
+| Single-file generation and ZIP contents | Passed locally and in GitHub Actions | `node versions/wordpress/build.mjs`; archive has exactly one entry whose SHA256 equals the PHP file; downloaded CI PHP/ZIP bytes match the local release |
 | PHP syntax | Passed locally | `php -l` on the generated plugin and every WordPress source/test PHP file |
 | TypeScript and lint | Passed locally | `pnpm typecheck` / `pnpm lint` |
 | Existing unit regressions | 49 passed locally | `pnpm test` |
 | Real WordPress activation, identity, recovery and governance integration | 33 passed locally and on PHP 8.3/MySQL 8 in GitHub Actions | WP-CLI `eval-file versions/wordpress/tests/integration.php --use-include`; includes 320 classifier parity evaluations against the existing PHP algorithm |
-| WordPress cookie login, nonce enforcement, role separation, full lifecycle, administration, mobile and keyboard | 8 passed locally | `pnpm exec playwright test --config versions/wordpress/playwright.config.ts` |
+| WordPress cookie login, nonce enforcement, role separation, full lifecycle, administration, mobile and keyboard | 8 passed locally and in GitHub Actions | `pnpm exec playwright test --config versions/wordpress/playwright.config.ts`; includes explicit authenticated denial for a WordPress subscriber |
 | Original production application build | Passed locally | `pnpm build` |
 | Existing PHP/MySQL checks, static analysis and browser suite | Passed in GitHub Actions | 44 PHP checks, PHPStan, 23 browser tests, build and deployment packaging; [verified run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784275544) |
 | Original PostgreSQL integration/browser and production pipeline | Passed in GitHub Actions | Unit/integration/browser tests, production build, dependency audit, container build and smoke test; [verified run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39784742013) |
@@ -97,7 +97,7 @@ Required negative cases include unauthenticated reads/writes, missing or invalid
 
 Local runtime: Windows, WordPress 7.1.3, WP-CLI 2.12.0, PHP 8.5.11, MariaDB 11.4.8, Chromium. The CI workflow pins WordPress 7.1.3 and WP-CLI 2.12.0 with checked download digests and uses PHP 8.3/MySQL 8.0. It installs the generated ZIP, runs the same tests, verifies reproducible packaging and publishes `WordPress-Plugin-Version` as a GitHub Actions artifact. Earlier WordPress releases, including the declared 6.6 minimum, have not been separately exercised.
 
-The WordPress CI check on [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8) records the latest PHP 8.3/MySQL 8 results. Successful runs publish the release artifact. These are code and synthetic workflow checks, not a hosted deployment or human UAT result.
+The [successful WordPress CI run](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39836721683) at commit `510b1b3` passed all 33 integration checks and eight browser tests on PHP 8.3/MySQL 8, including release reproducibility and syntax checks. Its [release artifact](https://github.com/ctucker-web/ai-governance-capstone/actions/runs/39836721683/artifacts/12451411484) contains the installable ZIP, single PHP file, and checksums. The downloaded PHP and ZIP hashes match the local release exactly. [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8) records subsequent checks. These are code and synthetic workflow checks, not a hosted deployment or human UAT result.
 
 During verification, a local test configuration warning prevented cookie headers, and the synthetic administrator fixture initially handled an existing account password incorrectly. Those fixture/setup problems were corrected. Browser tests also exposed an HTML-encoded logout URL, which is now decoded before passing to JavaScript, and a race with WordPress's delayed login autofocus; tests wait for the native focus before typing. These failures were not skipped. WP-CLI 2.12 emits an upstream PHP 8.5 deprecation warning locally; it does not prevent the checks from passing.
 

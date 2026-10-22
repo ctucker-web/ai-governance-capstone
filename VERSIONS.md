@@ -6,7 +6,7 @@ The platform will have at least three distinct implementations. Versions are pre
 | --- | --- | --- | --- |
 | 1 | Next.js/PostgreSQL Version | Verified working MVP: 63 tests, production build and Docker CI passed | Root application; tag `platform-v1-nextjs-postgresql`; commit `d28af42f4c025aa67d5e4303b034c28760143c9b`; PR #4 |
 | 2 | PHP/MySQL Version | **Selected capstone implementation.** Existing hosted demonstration; Requester UX branch adds verified guidance with 44 PHP checks and 23 PHP browser tests. See PR #7 for the tested update and deployment status. | `versions/php-mysql/`; branch `feature/php-mysql-version`; PR #5; UX branch `feature/uat-requester-ux`; PR #7; hosted demonstration `https://www.changedevelop.org/ai/` |
-| 3 | WordPress Plugin Version | Alternative single-file plugin using existing WordPress login, capabilities, and database connection; 33 local WordPress integration checks and 8 browser tests passed. No hosted installation claimed. | [`versions/wordpress/`](versions/wordpress/README.md); branch `feature/wordpress-plugin-version`; [implementation notes](docs/implementation/WORDPRESS_PLUGIN_VERSION.md) |
+| 3 | WordPress Plugin Version | Alternative single-file plugin using existing WordPress login, capabilities, and database connection; 33 WordPress integration checks and 8 browser tests passed locally and in GitHub Actions. No hosted installation claimed. | [`versions/wordpress/`](versions/wordpress/README.md); branch `feature/wordpress-plugin-version`; [PR #8](https://github.com/ctucker-web/ai-governance-capstone/pull/8); [implementation notes](docs/implementation/WORDPRESS_PLUGIN_VERSION.md) |
 
 ## Capstone implementation decision
 
